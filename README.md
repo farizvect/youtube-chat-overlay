@@ -30,7 +30,7 @@ Menampilkan YouTube Live Chat di OBS menggunakan Browser Source dengan WebSocket
 - Klik kanan di folder → **Open in Terminal** (Windows 11)
 - Klik kanan sambil tahan Shift → **Open PowerShell window here** (Windows 10)
 
-### 3. Install Bun
+### 3. Install Bun (Javascript runtime)
 
 **Windows (PowerShell):**
 ```powershell
@@ -76,8 +76,8 @@ bun server.js --live=dQw4w9WgXcQ
 1. Di OBS, klik **+** pada Sources → **Browser**
 2. Isi settings:
    - **URL:** `http://localhost:6969`
-   - **Width:** `500` (atau sesuai kebutuhan)
-   - **Height:** `600` (atau sesuai kebutuhan)
+   - **Width:** `1280` (atau sesuai kebutuhan)
+   - **Height:** `720` (atau sesuai kebutuhan)
    - **Custom CSS:** kosongkan
 3. Klik **OK**
 

@@ -7,14 +7,17 @@ export default {
     maxMessages: 5,
 
     // Time before message fades out (in milliseconds)
-    fadeOutDelay: 30000, // 30 seconds
+    fadeOutDelay: 120000, // 30 seconds
+
+    // Inline chat mode (true = username: message on same line)
+    inlineChat: false,
 
     // ===== STYLING =====
 
     // Font family (gunakan nama font dari Google Fonts)
     // Contoh: "Inter", "Roboto", "Poppins", "Nunito", "Open Sans"
     // Lihat daftar lengkap di: https://fonts.google.com
-    fontFamily: "Inter",
+    fontFamily: "Roboto",
 
     // Font size untuk pesan (dalam pixel)
     fontSize: 16,

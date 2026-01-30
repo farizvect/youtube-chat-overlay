@@ -224,3 +224,24 @@ body {
         font-size: 14px;
     }
 }
+
+/* Inline Chat Mode */
+.inline-mode {
+    display: inline;
+}
+
+.inline-mode .username {
+    display: inline;
+}
+
+.inline-separator {
+    color: var(--text-color);
+    opacity: 0.7;
+    font-weight: 400;
+}
+
+.inline-text {
+    display: inline;
+    font-size: var(--font-size);
+    color: var(--text-color);
+}
