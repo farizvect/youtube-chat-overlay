@@ -25,7 +25,7 @@ export default {
     // Chat box background color (RGBA format) - diabaikan jika noBackground = true
     // Contoh: "rgba(0, 0, 0, 0.7)" untuk semi-transparent
     //         "rgba(30, 30, 40, 0.9)" untuk dark purple
-    backgroundColor: "rgba(0, 0, 247, 0.9)",
+    backgroundColor: "rgba(50, 50, 68, 0.9)",
 
     // Warna text pesan
     textColor: "#ffffffee",

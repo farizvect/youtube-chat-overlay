@@ -30,6 +30,47 @@ function broadcast(data) {
 // Initialize YouTube Live Chat
 let liveChat = null;
 
+// Resolve @handle to Channel ID and find live stream
+async function resolveChannelToLiveId(handle) {
+    try {
+        // Fetch the channel's live page
+        const url = `https://www.youtube.com/${handle}/live`;
+        console.log(`🔍 Fetching: ${url}`);
+
+        const response = await fetch(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+            redirect: "follow"
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const html = await response.text();
+
+        // Extract video ID from the page
+        // Look for "videoId":"XXXXXXXXXXX" pattern
+        const videoIdMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+
+        if (videoIdMatch && videoIdMatch[1]) {
+            // Verify it's actually a live stream by checking for isLive
+            if (html.includes('"isLive":true') || html.includes('"isLiveContent":true')) {
+                return videoIdMatch[1];
+            } else {
+                console.log("⚠️  Found video but it's not currently live");
+                return null;
+            }
+        }
+
+        return null;
+    } catch (error) {
+        console.error(`❌ Error resolving channel: ${error.message}`);
+        return null;
+    }
+}
+
 async function startLiveChat() {
     if (!channelId && !liveId) {
         console.log("⚠️  No channel or live ID provided. Start with:");
@@ -41,13 +82,24 @@ async function startLiveChat() {
     }
 
     try {
+        // If channel handle provided, resolve to live ID
         if (channelId) {
             console.log(`🔍 Looking for live stream on channel: ${channelId}`);
-            liveChat = new LiveChat({ channelId });
-        } else {
-            console.log(`🔍 Connecting to live stream: ${liveId}`);
-            liveChat = new LiveChat({ liveId });
+            const resolvedLiveId = await resolveChannelToLiveId(channelId);
+
+            if (resolvedLiveId) {
+                console.log(`✅ Found live stream: ${resolvedLiveId}`);
+                liveId = resolvedLiveId;
+            } else {
+                console.log("❌ No live stream found on this channel");
+                console.log("💡 Try using --live=VIDEO_ID instead");
+                return;
+            }
         }
+
+        // Now use liveId
+        console.log(`🔍 Connecting to live stream: ${liveId}`);
+        liveChat = new LiveChat({ liveId });
 
         // Chat started event
         liveChat.on("start", (liveId) => {
