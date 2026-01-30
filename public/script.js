@@ -13,7 +13,8 @@ let config = {
     ownerColor: "#ffd700",
     moderatorColor: "#5865f2",
     memberColor: "#2ecc71",
-    verifiedColor: "#00bcd4"
+    verifiedColor: "#00bcd4",
+    inlineChat: false
 };
 
 // Track loaded fonts to avoid reloading
@@ -126,45 +127,86 @@ function addChatMessage(message) {
     const contentEl = document.createElement('div');
     contentEl.className = 'message-content';
 
-    // Username row
-    const usernameRow = document.createElement('div');
-    usernameRow.className = 'username-row';
+    // Check if inline mode
+    if (config.inlineChat) {
+        // Inline mode: username: message on same line
+        contentEl.classList.add('inline-mode');
 
-    // Username with role-based color
-    const usernameEl = document.createElement('span');
-    usernameEl.className = 'username';
+        // Username
+        const usernameEl = document.createElement('span');
+        usernameEl.className = 'username';
 
-    // Add role-based color class (priority: Owner > Moderator > Member > Verified)
-    if (message.badges && message.badges.length > 0) {
-        if (message.badges.includes('Owner')) {
-            usernameEl.classList.add('username-owner');
-        } else if (message.badges.includes('Moderator')) {
-            usernameEl.classList.add('username-moderator');
-        } else if (message.badges.includes('Member')) {
-            usernameEl.classList.add('username-member');
-        } else if (message.badges.includes('Verified')) {
-            usernameEl.classList.add('username-verified');
+        // Add role-based color class
+        if (message.badges && message.badges.length > 0) {
+            if (message.badges.includes('Owner')) {
+                usernameEl.classList.add('username-owner');
+            } else if (message.badges.includes('Moderator')) {
+                usernameEl.classList.add('username-moderator');
+            } else if (message.badges.includes('Member')) {
+                usernameEl.classList.add('username-member');
+            } else if (message.badges.includes('Verified')) {
+                usernameEl.classList.add('username-verified');
+            }
         }
+
+        usernameEl.textContent = message.author;
+        contentEl.appendChild(usernameEl);
+
+        // Separator
+        const separator = document.createElement('span');
+        separator.className = 'inline-separator';
+        separator.textContent = ' : ';
+        contentEl.appendChild(separator);
+
+        // Message (inline span, not div)
+        const textEl = document.createElement('span');
+        textEl.className = 'message-text inline-text';
+        textEl.innerHTML = processMessage(message);
+        contentEl.appendChild(textEl);
+
+    } else {
+        // Normal mode: username on top, message below
+
+        // Username row
+        const usernameRow = document.createElement('div');
+        usernameRow.className = 'username-row';
+
+        // Username with role-based color
+        const usernameEl = document.createElement('span');
+        usernameEl.className = 'username';
+
+        // Add role-based color class (priority: Owner > Moderator > Member > Verified)
+        if (message.badges && message.badges.length > 0) {
+            if (message.badges.includes('Owner')) {
+                usernameEl.classList.add('username-owner');
+            } else if (message.badges.includes('Moderator')) {
+                usernameEl.classList.add('username-moderator');
+            } else if (message.badges.includes('Member')) {
+                usernameEl.classList.add('username-member');
+            } else if (message.badges.includes('Verified')) {
+                usernameEl.classList.add('username-verified');
+            }
+        }
+
+        usernameEl.textContent = message.author;
+        usernameRow.appendChild(usernameEl);
+
+        // Super chat amount
+        if (message.superchat && message.superchat.amount) {
+            const amountEl = document.createElement('span');
+            amountEl.className = 'super-chat-amount';
+            amountEl.textContent = message.superchat.amount;
+            usernameRow.appendChild(amountEl);
+        }
+
+        contentEl.appendChild(usernameRow);
+
+        // Message text with emotes and custom GIFs
+        const textEl = document.createElement('div');
+        textEl.className = 'message-text';
+        textEl.innerHTML = processMessage(message);
+        contentEl.appendChild(textEl);
     }
-
-    usernameEl.textContent = message.author;
-    usernameRow.appendChild(usernameEl);
-
-    // Super chat amount
-    if (message.superchat && message.superchat.amount) {
-        const amountEl = document.createElement('span');
-        amountEl.className = 'super-chat-amount';
-        amountEl.textContent = message.superchat.amount;
-        usernameRow.appendChild(amountEl);
-    }
-
-    contentEl.appendChild(usernameRow);
-
-    // Message text with emotes and custom GIFs
-    const textEl = document.createElement('div');
-    textEl.className = 'message-text';
-    textEl.innerHTML = processMessage(message);
-    contentEl.appendChild(textEl);
 
     msgEl.appendChild(contentEl);
     container.appendChild(msgEl);

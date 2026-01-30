@@ -253,6 +253,7 @@ const server = Bun.serve({
                         moderatorColor: config.moderatorColor,
                         memberColor: config.memberColor,
                         verifiedColor: config.verifiedColor,
+                        inlineChat: config.inlineChat,
                     },
                 })
             );
