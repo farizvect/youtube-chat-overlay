@@ -113,6 +113,14 @@ export default {
   // Warna text
   textColor: "#f0f0f0",
   
+  // ===== ROLE COLORS =====
+  
+  // Warna username berdasarkan role
+  ownerColor: "#ffd700",      // Owner/Streamer (Gold)
+  moderatorColor: "#5865f2",  // Moderator (Blue)
+  memberColor: "#2ecc71",     // Member/Subscriber (Green)
+  verifiedColor: "#00bcd4",   // Verified (Cyan)
+  
   // ===== FILTER =====
   
   // Filter kata kotor (case-insensitive)
@@ -156,32 +164,6 @@ stream/
 └── README.md
 ```
 
-## Customization
-
-### Warna Username
-
-Edit `public/style.css`:
-
-```css
-/* Normal user */
-.username { color: #f0f0f0; }
-
-/* Owner - Gold */
-.username-owner { color: #ffd700; }
-
-/* Moderator - Blue */
-.username-moderator { color: #5865f2; }
-
-/* Member - Green */
-.username-member { color: #2ecc71; }
-
-/* Verified - Cyan */
-.username-verified { color: #00bcd4; }
-```
-
-### Chat Box Style
-
-Edit `.chat-message` di `public/style.css` untuk mengubah tampilan box chat.
 
 ## Troubleshooting
 
