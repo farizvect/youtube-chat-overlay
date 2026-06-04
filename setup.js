@@ -149,6 +149,7 @@ async function gifManager() {
         const gifFiles = listGifFiles();
 
         console.log(`\n─── GIF Manager (config: ${active}) ───`);
+        console.log(`  Files go in:  public/gifs/`);
         if (Object.keys(gifs).length === 0) {
             console.log("  No triggers configured.");
         } else {
@@ -177,7 +178,8 @@ async function gifManager() {
 
         if (action === "add") {
             if (gifFiles.length === 0) {
-                console.log("❌ No GIF files. Import one first.");
+                console.log("❌ No GIF files found. Put .gif/.png/.webp files in public/gifs/ first.");
+                console.log("   Or use option 3 (Import GIF from URL) to download one.\n");
                 continue;
             }
             const file = await select({

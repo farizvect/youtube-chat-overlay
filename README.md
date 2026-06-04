@@ -77,21 +77,13 @@ Menu utama:
 
 ```
 ─── GIF Manager ───
+  Files go in:  public/gifs/
   Trigger → File:
     cat → /gifs/happycat.gif
     pog → /gifs/pogchamp.gif
-
-  Files in public/gifs/:
-    - happycat.gif
-    - pogchamp.gif
-
-  1) Add GIF trigger       ← hubungkan kata ke file GIF
-  2) Remove GIF trigger     ← lepas trigger
-  3) Import GIF from URL    ← download + langsung pasang trigger
-  0) Back
 ```
 
-Tambahkan file GIF sendiri ke `public/gifs/`, lalu assign trigger lewat menu option 1. Atau import dari URL via option 3.
+Taruh file `.gif` / `.png` / `.webp` di folder `public/gifs/`, lalu assign trigger word lewat menu. Atau pakai **Import GIF from URL** buat download langsung.
 
 ## Configuration
 
