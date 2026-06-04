@@ -4,15 +4,26 @@ Menampilkan YouTube Live Chat di OBS menggunakan Browser Source dengan WebSocket
 
 ## Quick Start
 
+**Linux / macOS:**
 ```bash
-# One-liner — download, install, and configure interactively:
 curl -fsSL https://raw.githubusercontent.com/farizvect/youtube-chat-overlay/refs/heads/main/install.sh | bash
-
-# Every time you go live:
-cd ~/youtube-chat-overlay && bash start.sh
 ```
 
-`start.sh` akan menampilkan config picker — pilih config sesuai stream kamu (turnamen, santai, podcast, dll), lalu masukkan live video ID atau channel handle.
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/farizvect/youtube-chat-overlay/refs/heads/main/install.ps1 | iex
+```
+
+**Every time you go live:**
+```bash
+# Linux/macOS
+cd ~/youtube-chat-overlay && bash start.sh
+
+# Windows (PowerShell)
+cd ~/youtube-chat-overlay; .\start.ps1
+```
+
+`start.sh` / `start.ps1` akan menampilkan config picker — pilih config sesuai stream kamu (turnamen, santai, podcast, dll), lalu masukkan live video ID atau channel handle.
 
 ## Features
 
@@ -139,8 +150,10 @@ bash install.sh
 ├── configs/               # Semua config disini
 │   ├── default.json
 │   └── tournament.json
-├── install.sh             # One-time installer
-├── start.sh               # Launcher + config picker
+├── install.sh             # One-line installer (Linux/macOS)
+├── install.ps1            # One-line installer (Windows)
+├── start.sh               # Launcher + config picker (Linux/macOS)
+├── start.ps1              # Launcher + config picker (Windows)
 ├── package.json
 ├── public/
 │   ├── index.html         # Browser source page
