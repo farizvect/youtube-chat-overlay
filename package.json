@@ -3,10 +3,10 @@
   "type": "module",
   "scripts": {
     "start": "bun server.js",
-    "setup": "bun setup.js",
-    "install": "bash install.sh"
+    "setup": "bun setup.js"
   },
   "dependencies": {
+    "@inquirer/prompts": "^8.0.2",
     "youtube-chat": "^2.2.0"
   }
 }
