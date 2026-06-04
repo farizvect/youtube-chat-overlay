@@ -27,7 +27,7 @@ if ($bun) {
     Write-Host "✅ Bun installed: $(bun --version)"
 }
 
-# Clone repo
+# Clone/download repo
 if (Test-Path $InstallDir) {
     Write-Host "📁 Directory already exists: $InstallDir"
     Write-Host "   To reinstall, delete it first: Remove-Item -Recurse -Force $InstallDir"
@@ -35,8 +35,19 @@ if (Test-Path $InstallDir) {
 }
 
 Write-Host ""
-Write-Host "📥 Cloning repo..."
-git clone $Repo $InstallDir
+$git = Get-Command git -ErrorAction SilentlyContinue
+if ($git) {
+    Write-Host "📥 Cloning repo via git..."
+    git clone --depth 1 $Repo $InstallDir
+} else {
+    Write-Host "📥 Git not found — downloading via Invoke-WebRequest..."
+    $ZipUrl = "https://github.com/farizvect/youtube-chat-overlay/archive/refs/heads/main.zip"
+    $ZipPath = "$env:TEMP\youtube-chat-overlay.zip"
+    Invoke-WebRequest -Uri $ZipUrl -OutFile $ZipPath
+    Expand-Archive -Path $ZipPath -DestinationPath $env:TEMP
+    Move-Item "$env:TEMP\youtube-chat-overlay-main" $InstallDir
+    Remove-Item $ZipPath
+}
 Set-Location $InstallDir
 
 # Install dependencies
