@@ -7,6 +7,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Repo = "https://github.com/farizvect/youtube-chat-overlay.git"
+$BunBase = "$env:USERPROFILE\.bun\bin"
+$BunExe  = "$BunBase\bun.exe"
 
 Write-Host ""
 Write-Host "╔══════════════════════════════════════════════╗"
@@ -16,40 +18,25 @@ Write-Host ""
 Write-Host "  Install to: $InstallDir"
 Write-Host ""
 
-# Find bun — try PATH first, then known locations
-function Find-Bun {
-    $cmd = Get-Command bun -ErrorAction SilentlyContinue
-    if ($cmd) { return $cmd.Source }
-    $known = @(
-        "$HOME\.bun\bin\bun.exe",
-        "$HOME\.bun\bin\bun",
-        "$env:ProgramFiles\bun\bun.exe"
-    )
-    foreach ($p in $known) {
-        if (Test-Path $p) { return $p }
-    }
-    return $null
-}
-
-$bunExe = Find-Bun
-
-if ($bunExe) {
-    Write-Host "✅ Bun found: $(& $bunExe --version)"
+# Resolve bun — try PATH first, then known install location
+if (Get-Command bun -ErrorAction SilentlyContinue) {
+    Write-Host "✅ Bun found: $(bun --version)"
+} elseif (Test-Path $BunExe) {
+    Write-Host "✅ Bun found: $(& $BunExe --version)"
 } else {
     Write-Host "📦 Installing Bun..."
     irm https://bun.sh/install.ps1 | iex
-    # Refresh PATH + try known location
-    $env:Path = "$HOME\.bun\bin;$env:Path"
-    $bunExe = Find-Bun
-    if (-not $bunExe) {
-        Write-Host "❌ Bun install failed — try restarting PowerShell and re-run."
-        Write-Host "   Or install manually: irm https://bun.sh/install.ps1 | iex"
+
+    # Bun installer modifies registry PATH, not current session.
+    # Use the known binary location directly.
+    if (Test-Path $BunExe) {
+        Write-Host "✅ Bun installed: $(& $BunExe --version)"
+    } else {
+        Write-Host "❌ Bun not found at $BunExe after install."
+        Write-Host "   Try restarting PowerShell and re-run this installer."
         exit 1
     }
-    Write-Host "✅ Bun installed: $(& $bunExe --version)"
 }
-
-function bun { & $bunExe @args }
 
 # Clone/download repo
 if (Test-Path $InstallDir) {
@@ -59,8 +46,7 @@ if (Test-Path $InstallDir) {
 }
 
 Write-Host ""
-$git = Get-Command git -ErrorAction SilentlyContinue
-if ($git) {
+if (Get-Command git -ErrorAction SilentlyContinue) {
     Write-Host "📥 Cloning repo via git..."
     git clone --depth 1 $Repo $InstallDir
 } else {
@@ -77,12 +63,12 @@ Set-Location $InstallDir
 # Install dependencies
 Write-Host ""
 Write-Host "📦 Installing dependencies..."
-& $bunExe install
+& $BunExe install
 Write-Host "✅ Dependencies installed"
 
 # Run welcome onboarding (then setup wizard)
 Write-Host ""
-& $bunExe welcome.js
+& $BunExe welcome.js
 
 Write-Host ""
 Write-Host "╔══════════════════════════════════════════════╗"
