@@ -2,23 +2,68 @@ import { LiveChat } from "youtube-chat";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-// Load config — try config.json first, fall back to template
-let config;
+// Config paths
 const configPath = join(import.meta.dir, "config.json");
 const templatePath = join(import.meta.dir, "config.template.json");
-try {
-    const raw = readFileSync(configPath, "utf-8");
-    config = JSON.parse(raw);
-    console.log("📋 Loaded config from config.json");
-} catch {
-    console.log("⚠️  config.json not found, using template defaults.");
-    console.log("   Run: bun setup.js   to customize interactively.");
-    const raw = readFileSync(templatePath, "utf-8");
-    config = JSON.parse(raw);
+
+// Load config — try config.json first, fall back to template
+let config;
+function loadConfig() {
+    try {
+        const raw = readFileSync(configPath, "utf-8");
+        config = JSON.parse(raw);
+        console.log("📋 Loaded config from config.json");
+    } catch {
+        if (!config) {
+            console.log("⚠️  config.json not found, using template defaults.");
+            console.log("   Run: bun setup.js   to customize interactively.");
+        }
+        const raw = readFileSync(templatePath, "utf-8");
+        config = JSON.parse(raw);
+    }
+    // Ensure defaults for optional fields
+    config.position = config.position || "bottom-left";
+    config.superChatDuration = config.superChatDuration || 3;
 }
+loadConfig();
 
 // Store connected WebSocket clients
 const clients = new Set();
+
+// Message replay buffer (ring buffer)
+const MESSAGE_BUFFER_MAX = 10;
+const messageBuffer = [];
+
+// Broadcast config to a specific client (or all if ws is null)
+function sendConfig(ws) {
+    const payload = JSON.stringify({
+        type: "config",
+        config: {
+            maxMessages: config.maxMessages,
+            fadeOutDelay: config.fadeOutDelay,
+            customGifs: config.customGifs,
+            backgroundColor: config.backgroundColor,
+            fontSize: config.fontSize,
+            noBackground: config.noBackground,
+            textColor: config.textColor,
+            fontFamily: config.fontFamily,
+            ownerColor: config.ownerColor,
+            moderatorColor: config.moderatorColor,
+            memberColor: config.memberColor,
+            verifiedColor: config.verifiedColor,
+            inlineChat: config.inlineChat,
+            position: config.position,
+            superChatDuration: config.superChatDuration,
+        },
+    });
+    if (ws) {
+        if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+    } else {
+        for (const client of clients) {
+            if (client.readyState === WebSocket.OPEN) client.send(payload);
+        }
+    }
+}
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -51,6 +96,9 @@ function broadcast(data) {
             client.send(message);
         }
     }
+    // Add to replay buffer
+    messageBuffer.push(data);
+    if (messageBuffer.length > MESSAGE_BUFFER_MAX) messageBuffer.shift();
 }
 
 // Initialize YouTube Live Chat
@@ -251,6 +299,16 @@ const server = Bun.serve({
             });
         }
 
+        // Config hot-reload
+        if (req.method === "POST" && url.pathname === "/reload") {
+            console.log("🔄 Reloading config...");
+            loadConfig();
+            sendConfig(null); // broadcast to all clients
+            return new Response(JSON.stringify({ status: "ok" }), {
+                headers: { "Content-Type": "application/json" },
+            });
+        }
+
         // Serve static files from public folder
         let filePath = url.pathname === "/" ? "/index.html" : url.pathname;
 
@@ -274,27 +332,13 @@ const server = Bun.serve({
             clients.add(ws);
             console.log(`🔌 Client connected (${clients.size} total)`);
 
-            // Send config to client
-            ws.send(
-                JSON.stringify({
-                    type: "config",
-                    config: {
-                        maxMessages: config.maxMessages,
-                        fadeOutDelay: config.fadeOutDelay,
-                        customGifs: config.customGifs,
-                        backgroundColor: config.backgroundColor,
-                        fontSize: config.fontSize,
-                        noBackground: config.noBackground,
-                        textColor: config.textColor,
-                        fontFamily: config.fontFamily,
-                        ownerColor: config.ownerColor,
-                        moderatorColor: config.moderatorColor,
-                        memberColor: config.memberColor,
-                        verifiedColor: config.verifiedColor,
-                        inlineChat: config.inlineChat,
-                    },
-                })
-            );
+            // Replay recent messages so overlay isn't blank
+            for (const msg of messageBuffer) {
+                ws.send(JSON.stringify(msg));
+            }
+
+            // Send current config
+            sendConfig(ws);
         },
 
         message(ws, message) {

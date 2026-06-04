@@ -17,6 +17,8 @@
     "verifiedColor": "#00bcd4",
 
     "inlineChat": false,
+    "position": "bottom-left",
+    "superChatDuration": 3,
 
     "bannedWords": [],
 
