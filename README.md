@@ -5,11 +5,11 @@ Menampilkan YouTube Live Chat di OBS menggunakan Browser Source dengan WebSocket
 ## Quick Start
 
 ```bash
-# First time only:
-bash install.sh
+# One-liner — download, install, and configure interactively:
+curl -fsSL https://raw.githubusercontent.com/farizvect/youtube-chat-overlay/refs/heads/main/install.sh | bash
 
 # Every time you go live:
-bash start.sh
+cd ~/youtube-chat-overlay && bash start.sh
 ```
 
 `start.sh` akan menampilkan config picker — pilih config sesuai stream kamu (turnamen, santai, podcast, dll), lalu masukkan live video ID atau channel handle.
@@ -112,12 +112,12 @@ Tambahkan file GIF sendiri ke `public/gifs/`, lalu assign trigger lewat menu opt
 }
 ```
 
-## Manual Setup
+## Manual Setup (alternative)
 
 ```bash
-bun install
-bun setup.js          # Interactive config wizard
-bun server.js --live=VIDEO_ID
+git clone https://github.com/farizvect/youtube-chat-overlay.git
+cd youtube-chat-overlay
+bash install.sh
 ```
 
 ## OBS Setup
