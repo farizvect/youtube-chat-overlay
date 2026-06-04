@@ -4,10 +4,10 @@ export default {
     port: 6969,
 
     // Maximum messages to display
-    maxMessages: 5,
+    maxMessages: 10,
 
     // Time before message fades out (in milliseconds)
-    fadeOutDelay: 120000, // 30 seconds
+    fadeOutDelay: 120000, // 2 minutes (120000ms)
 
     // Inline chat mode (true = username: message on same line)
     inlineChat: false,
