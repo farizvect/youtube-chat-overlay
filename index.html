@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Chat Overlay — Setup</title>
+<style>
+  :root {
+    --bg: #0f0f14;
+    --card: #1a1a24;
+    --border: #2a2a3a;
+    --text: #e0e0e0;
+    --dim: #888;
+    --accent: #ff4444;
+    --green: #2ecc71;
+    --blue: #5865f2;
+    --gold: #ffd700;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 60px 24px; }
+  .hero { text-align: center; margin-bottom: 60px; }
+  .hero h1 { font-size: 2.4rem; font-weight: 800; margin-bottom: 8px; }
+  .hero .sub { color: var(--dim); font-size: 1.1rem; }
+
+  .step { 
+    background: var(--card); 
+    border: 1px solid var(--border); 
+    border-radius: 12px; 
+    padding: 28px; 
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .step-num {
+    position: absolute;
+    top: -14px; left: -14px;
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.9rem; color: #fff;
+  }
+  .step h2 { font-size: 1.3rem; margin-bottom: 12px; }
+  .step p { color: var(--dim); margin-bottom: 16px; }
+
+  .code-block {
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.85rem;
+    color: #f0f0f0;
+    overflow-x: auto;
+    position: relative;
+  }
+  .code-block .prompt { color: var(--green); user-select: none; }
+  .code-block .comment { color: #666; }
+
+  .copy-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: var(--border);
+    border: none;
+    color: var(--dim);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { background: #3a3a4a; color: #fff; }
+  .copy-btn.copied { background: var(--green); color: #000; }
+
+  .tabs { display: flex; gap: 0; margin-bottom: 0; }
+  .tab {
+    padding: 8px 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dim);
+    font-family: inherit;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.15s;
+  }
+  .tab:not(:first-child) { margin-left: -1px; }
+  .tab.active { background: #000; color: #fff; border-color: var(--border); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .obs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .obs-field {
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .obs-field .label { font-size: 0.75rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .obs-field .value { font-family: 'Fira Code', monospace; font-size: 1rem; margin-top: 4px; }
+
+  .note {
+    background: rgba(255,215,0,0.08);
+    border: 1px solid rgba(255,215,0,0.2);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: var(--gold);
+  }
+  .note strong { color: #fff; }
+
+  .footer { text-align: center; margin-top: 60px; color: var(--dim); font-size: 0.8rem; }
+  .footer a { color: var(--blue); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  .demo-box {
+    position: fixed;
+    bottom: 20px; left: 20px;
+    display: flex; flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+    opacity: 0.3;
+    z-index: 0;
+  }
+  .demo-msg {
+    background: rgba(50,50,68,0.9);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    animation: demoSlide 8s ease-in-out infinite;
+  }
+  .demo-msg:nth-child(1) { animation-delay: 0s; }
+  .demo-msg:nth-child(2) { animation-delay: 2.5s; }
+  .demo-msg:nth-child(3) { animation-delay: 5s; }
+  .demo-msg .user { font-weight: 700; }
+  .demo-msg .user.owner { color: #ffd700; }
+  .demo-msg .user.mod { color: #5865f2; }
+  .demo-msg .user.member { color: #2ecc71; }
+
+  @keyframes demoSlide {
+    0% { opacity: 0; transform: translateX(-120%); }
+    5%, 25% { opacity: 1; transform: translateX(0); }
+    30%, 100% { opacity: 0; transform: translateX(120%); }
+  }
+
+  @media (max-width: 600px) {
+    .container { padding: 40px 16px; }
+    .hero h1 { font-size: 1.8rem; }
+    .obs-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Live demo background -->
+<div class="demo-box">
+  <div class="demo-msg">
+    <span class="user owner">Streamer</span>: Welcome to the stream everyone! 🎉
+  </div>
+  <div class="demo-msg">
+    <span class="user mod">Nightbot</span>: Type !commands for the list
+  </div>
+  <div class="demo-msg">
+    <span class="user member">viewer42</span>: first time here, what game is this?
+  </div>
+</div>
+
+<div class="container">
+
+<div class="hero">
+  <h1>YouTube Chat Overlay</h1>
+  <p class="sub">Real-time YouTube chat for OBS Browser Source. One command to install.</p>
+</div>
+
+<!-- Step 1: Install -->
+<div class="step">
+  <div class="step-num">1</div>
+  <h2>Install</h2>
+  <p>Copy-paste the command for your OS into the terminal. Installs everything — Bun, dependencies, and opens the setup wizard.</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab(event, 'linux')">Linux / macOS</button>
+    <button class="tab" onclick="showTab(event, 'windows')">Windows</button>
+  </div>
+
+  <div class="tab-content active" id="tab-linux">
+    <pre class="code-block"><span class="prompt">$</span> curl -fsSL https://raw.githubusercontent.com/farizvect/youtube-chat-overlay/refs/heads/main/install.sh | bash
+<button class="copy-btn" onclick="copyCode(this, 'curl -fsSL https://raw.githubusercontent.com/farizvect/youtube-chat-overlay/refs/heads/main/install.sh | bash')">Copy</button></pre>
+  </div>
+  <div class="tab-content" id="tab-windows">
+    <pre class="code-block"><span class="prompt">PS&gt;</span> irm https://raw.githubusercontent.com/farizvect/youtube-chat-overlay/refs/heads/main/install.ps1 | iex
+<button class="copy-btn" onclick="copyCode(this, 'irm https://raw.githubusercontent.com/farizvect/youtube-chat-overlay/refs/heads/main/install.ps1 | iex')">Copy</button></pre>
+  </div>
+
+  <p style="margin-top: 12px; font-size: 0.85rem; color: var(--dim);">The wizard will ask for font, colors, background style, and more. Your config is saved and can be changed anytime.</p>
+</div>
+
+<!-- Step 2: Start -->
+<div class="step">
+  <div class="step-num">2</div>
+  <h2>Start the server</h2>
+  <p>Every time you go live, run this from the install directory:</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab(event, 'linux2')">Linux / macOS</button>
+    <button class="tab" onclick="showTab(event, 'windows2')">Windows</button>
+  </div>
+
+  <div class="tab-content active" id="tab-linux2">
+    <pre class="code-block"><span class="prompt">$</span> cd ~/youtube-chat-overlay && bash start.sh
+<button class="copy-btn" onclick="copyCode(this, 'cd ~/youtube-chat-overlay && bash start.sh')">Copy</button></pre>
+  </div>
+  <div class="tab-content" id="tab-windows2">
+    <pre class="code-block"><span class="prompt">PS&gt;</span> cd ~/youtube-chat-overlay; .\start.ps1
+<button class="copy-btn" onclick="copyCode(this, 'cd ~/youtube-chat-overlay; .\\start.ps1')">Copy</button></pre>
+  </div>
+
+  <p style="margin-top: 12px; font-size: 0.85rem; color: var(--dim);">You'll pick a config preset, then enter the YouTube live video ID or channel handle. The server starts on <code>http://localhost:6969</code>.</p>
+</div>
+
+<!-- Step 3: OBS Setup -->
+<div class="step">
+  <div class="step-num">3</div>
+  <h2>Add to OBS</h2>
+  <p>Add a Browser Source in OBS pointing to the overlay server.</p>
+
+  <div class="obs-grid">
+    <div class="obs-field">
+      <div class="label">Source Type</div>
+      <div class="value">Browser</div>
+    </div>
+    <div class="obs-field">
+      <div class="label">URL</div>
+      <div class="value">http://localhost:6969</div>
+    </div>
+    <div class="obs-field">
+      <div class="label">Width</div>
+      <div class="value">1280</div>
+    </div>
+    <div class="obs-field">
+      <div class="label">Height</div>
+      <div class="value">720</div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>💡 Pro tip:</strong> Right-click the Browser Source in OBS and select <strong>Interact</strong> to test it without going live.
+  </div>
+</div>
+
+<!-- Step 4: Customize -->
+<div class="step">
+  <div class="step-num">4</div>
+  <h2>Customize anytime</h2>
+  <p>Run the setup wizard to change fonts, colors, manage GIFs, or switch config presets — even while streaming. Changes apply instantly via hot-reload.</p>
+
+  <pre class="code-block"><span class="prompt">$</span> cd ~/youtube-chat-overlay && bun setup.js
+<button class="copy-btn" onclick="copyCode(this, 'cd ~/youtube-chat-overlay && bun setup.js')">Copy</button></pre>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; font-size: 0.85rem; color: var(--dim);">
+    <div>🎨 <strong>4 font choices</strong> (Roboto, Inter, Poppins, etc.)</div>
+    <div>🖼️ <strong>GIF triggers</strong> — word → custom GIF</div>
+    <div>📐 <strong>3 positions</strong> — left, center, right</div>
+    <div>💬 <strong>Inline chat</strong> — compact mode</div>
+    <div>⭐ <strong>Super Chat</strong> — glow + extended time</div>
+    <div>🎭 <strong>Multi-config</strong> — presets per stream type</div>
+  </div>
+</div>
+
+<div class="footer">
+  <a href="https://github.com/farizvect/youtube-chat-overlay">GitHub</a> ·
+  AGPL-3.0 ·
+  No accounts, no API keys, no bullshit
+</div>
+
+</div>
+
+<script>
+function showTab(event, id) {
+  const parent = event.target.parentElement.parentElement;
+  parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  parent.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  parent.querySelector('#tab-' + id).classList.add('active');
+}
+
+function copyCode(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+</script>
+
+</body>
+</html>
