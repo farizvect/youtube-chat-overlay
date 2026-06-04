@@ -66,7 +66,7 @@ fi
 # Install/update dependencies
 echo ""
 echo "📦 Installing dependencies..."
-bun install --ignore-scripts
+bun install
 echo "✅ Dependencies installed"
 
 echo ""
