@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
 
-# Git Bash on Windows may not have bun in PATH yet
-if ! command -v bun &>/dev/null && [ -x "$HOME/.bun/bin/bun" ]; then
-    export PATH="$HOME/.bun/bin:$PATH"
-fi
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 if ! command -v bun &>/dev/null; then
-    echo "❌ bun not found. Install: curl -fsSL https://bun.sh/install | bash"
+    echo "❌ Bun not found. Run: bash install.sh"
     exit 1
 fi
 
-bun start.js
+exec bun "$SCRIPT_DIR/start.js"

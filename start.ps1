@@ -1,8 +1,13 @@
 # YouTube Chat Overlay — Start (Windows)
+
+$ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $ScriptDir
 
-$BunExe = "$env:USERPROFILE\.bun\bin\bun.exe"
-if (-not (Test-Path $BunExe)) { $BunExe = "bun" }
+$bun = Get-Command bun -ErrorAction SilentlyContinue
+if (-not $bun) {
+    Write-Host "❌ Bun not found. Run install.ps1 first."
+    exit 1
+}
 
-& $BunExe start.js
+& $bun.Source "$ScriptDir\start.js"
+exit $LASTEXITCODE
