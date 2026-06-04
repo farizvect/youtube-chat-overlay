@@ -21,9 +21,12 @@ cd ~/youtube-chat-overlay && bash start.sh
 
 # Windows (PowerShell)
 cd ~/youtube-chat-overlay; .\start.ps1
+
+# Or directly (all platforms):
+cd ~/youtube-chat-overlay && bun start.js
 ```
 
-`start.sh` / `start.ps1` akan menampilkan config picker — pilih config sesuai stream kamu (turnamen, santai, podcast, dll), lalu masukkan live video ID atau channel handle.
+`start.js` akan menampilkan config picker interaktif — pilih config dengan arrow key, lalu masukkan live video ID atau channel handle.
 
 ## Features
 
@@ -144,8 +147,9 @@ bash install.sh
 │   └── tournament.json
 ├── install.sh             # One-line installer (Linux/macOS)
 ├── install.ps1            # One-line installer (Windows)
-├── start.sh               # Launcher + config picker (Linux/macOS)
-├── start.ps1              # Launcher + config picker (Windows)
+├── start.js               # Interactive launcher (all platforms)
+├── start.sh               # Shell wrapper → start.js
+├── start.ps1              # PowerShell wrapper → start.js
 ├── package.json
 ├── public/
 │   ├── index.html         # Browser source page
