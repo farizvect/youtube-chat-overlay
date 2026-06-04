@@ -213,6 +213,18 @@ const server = Bun.serve({
             return;
         }
 
+        // Health check
+        if (url.pathname === "/health") {
+            return new Response(JSON.stringify({
+                status: "ok",
+                clients: clients.size,
+                liveId: liveId || null,
+                uptime: process.uptime(),
+            }), {
+                headers: { "Content-Type": "application/json" },
+            });
+        }
+
         // Serve static files from public folder
         let filePath = url.pathname === "/" ? "/index.html" : url.pathname;
 
