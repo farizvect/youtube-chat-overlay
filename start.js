@@ -23,12 +23,18 @@ const ACTIVE_PATH = join(ROOT, ".active-config");
 
 const FONTS = ["Roboto", "Inter", "Poppins", "Nunito", "Open Sans", "Montserrat"];
 const BG_PRESETS = [
-    { name: "🌙 Dark (default)", value: { color: "rgba(50, 50, 68, 0.9)", noBackground: false } },
-    { name: "⬛ Solid black", value: { color: "rgba(0, 0, 0, 0.85)", noBackground: false } },
-    { name: "🟣 Dark purple", value: { color: "rgba(30, 30, 50, 0.9)", noBackground: false } },
-    { name: "👻 Transparent (no background)", value: { color: "transparent", noBackground: true } },
-    { name: "🎨 Custom RGBA", value: { color: null, noBackground: false } },
+    { name: "🌙 Dark (default)", value: "dark", color: "rgba(50, 50, 68, 0.9)", noBackground: false },
+    { name: "⬛ Solid black", value: "black", color: "rgba(0, 0, 0, 0.85)", noBackground: false },
+    { name: "🟣 Dark purple", value: "purple", color: "rgba(30, 30, 50, 0.9)", noBackground: false },
+    { name: "👻 Transparent (no background)", value: "transparent", color: "transparent", noBackground: true },
+    { name: "🎨 Custom RGBA", value: "custom", color: null, noBackground: false },
 ];
+
+function currentBackgroundPreset(cfg) {
+    if (cfg.noBackground) return "transparent";
+    const preset = BG_PRESETS.find(p => p.color && p.color === cfg.backgroundColor);
+    return preset?.value || "custom";
+}
 
 function ensureDirs() {
     mkdirSync(CONFIGS_DIR, { recursive: true });
@@ -135,7 +141,7 @@ async function editConfig(name) {
     cfg.fontFamily = await select({
         message: "🔤 Font:",
         choices: FONTS.map(f => ({ name: f, value: f })),
-        default: fontIdx >= 0 ? fontIdx : 0,
+        default: fontIdx >= 0 ? cfg.fontFamily : FONTS[0],
     });
 
     // Font size
@@ -152,11 +158,14 @@ async function editConfig(name) {
     // Background
     const bg = await select({
         message: "🎨 Background style:",
-        choices: BG_PRESETS,
+        choices: BG_PRESETS.map(p => ({ name: p.name, value: p.value })),
+        default: currentBackgroundPreset(cfg),
     });
-    if (bg.noBackground) {
+    const bgPreset = BG_PRESETS.find(p => p.value === bg);
+    if (bgPreset.noBackground) {
         cfg.noBackground = true;
-    } else if (bg.color === null) {
+        cfg.backgroundColor = "transparent";
+    } else if (bgPreset.color === null) {
         const custom = await input({
             message: "🎨 RGBA color:",
             default: cfg.backgroundColor || "rgba(20,20,30,0.8)",
@@ -164,7 +173,7 @@ async function editConfig(name) {
         cfg.backgroundColor = custom;
         cfg.noBackground = false;
     } else {
-        cfg.backgroundColor = bg.color;
+        cfg.backgroundColor = bgPreset.color;
         cfg.noBackground = false;
     }
 
@@ -183,7 +192,7 @@ async function editConfig(name) {
     cfg.position = await select({
         message: "📌 Message position:",
         choices: posChoices,
-        default: posChoices.findIndex(p => p.value === (cfg.position || "bottom-left")),
+        default: cfg.position || "bottom-left",
     });
 
     // Super Chat duration
