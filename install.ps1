@@ -16,16 +16,40 @@ Write-Host ""
 Write-Host "  Install to: $InstallDir"
 Write-Host ""
 
-# Check/install Bun
-$bun = Get-Command bun -ErrorAction SilentlyContinue
-if ($bun) {
-    Write-Host "✅ Bun found: $(bun --version)"
+# Find bun — try PATH first, then known locations
+function Find-Bun {
+    $cmd = Get-Command bun -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    $known = @(
+        "$HOME\.bun\bin\bun.exe",
+        "$HOME\.bun\bin\bun",
+        "$env:ProgramFiles\bun\bun.exe"
+    )
+    foreach ($p in $known) {
+        if (Test-Path $p) { return $p }
+    }
+    return $null
+}
+
+$bunExe = Find-Bun
+
+if ($bunExe) {
+    Write-Host "✅ Bun found: $(& $bunExe --version)"
 } else {
     Write-Host "📦 Installing Bun..."
-    irm bun.sh/install.ps1 | iex
+    irm https://bun.sh/install.ps1 | iex
+    # Refresh PATH + try known location
     $env:Path = "$HOME\.bun\bin;$env:Path"
-    Write-Host "✅ Bun installed: $(bun --version)"
+    $bunExe = Find-Bun
+    if (-not $bunExe) {
+        Write-Host "❌ Bun install failed — try restarting PowerShell and re-run."
+        Write-Host "   Or install manually: irm https://bun.sh/install.ps1 | iex"
+        exit 1
+    }
+    Write-Host "✅ Bun installed: $(& $bunExe --version)"
 }
+
+function bun { & $bunExe @args }
 
 # Clone/download repo
 if (Test-Path $InstallDir) {
@@ -53,12 +77,12 @@ Set-Location $InstallDir
 # Install dependencies
 Write-Host ""
 Write-Host "📦 Installing dependencies..."
-bun install
+& $bunExe install
 Write-Host "✅ Dependencies installed"
 
 # Run welcome onboarding (then setup wizard)
 Write-Host ""
-bun welcome.js
+& $bunExe welcome.js
 
 Write-Host ""
 Write-Host "╔══════════════════════════════════════════════╗"
