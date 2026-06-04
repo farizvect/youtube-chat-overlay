@@ -50,15 +50,14 @@ echo "📦 Installing dependencies..."
 bun install
 echo "✅ Dependencies installed"
 
-# Run welcome onboarding (then setup wizard)
-echo ""
-bun welcome.js
-
 echo ""
 echo "╔══════════════════════════════════════════════╗"
 echo "║   ✅ Installation complete!                  ║"
 echo "║                                              ║"
 echo "║   To start:                                  ║"
 echo "║     cd $INSTALL_DIR && bun start.js          ║"
+echo "║                                              ║"
+echo "║   To edit setup later:                       ║"
+echo "║     cd $INSTALL_DIR && bun start.js --setup  ║"
 echo "╚══════════════════════════════════════════════╝"
 echo ""

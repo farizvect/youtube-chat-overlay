@@ -16,17 +16,11 @@ irm https://raw.githubusercontent.com/farizvect/youtube-chat-overlay/refs/heads/
 
 **Every time you go live:**
 ```bash
-# Linux/macOS
-cd ~/youtube-chat-overlay && bash start.sh
-
-# Windows (PowerShell)
-cd ~/youtube-chat-overlay; .\start.ps1
-
-# Or directly (all platforms):
-cd ~/youtube-chat-overlay && bun start.js
+cd ~/youtube-chat-overlay
+bun start.js
 ```
 
-`start.js` akan menampilkan config picker interaktif — pilih config dengan arrow key, lalu masukkan live video ID atau channel handle.
+`start.js` akan handle first-run setup, pilih config aktif, lalu minta live video ID atau channel handle.
 
 ## Features
 
@@ -37,7 +31,8 @@ cd ~/youtube-chat-overlay && bun start.js
 - ✅ Super Chat styling + glow animation + extended duration
 - ✅ Slide-in animation + auto fade-out
 - ✅ Inline chat mode
-- ✅ Interactive config wizard (`bun setup.js`)
+- ✅ Single launcher (`bun start.js`)
+- ✅ Interactive config wizard (`bun start.js --setup` atau `bun setup.js`)
 - ✅ Multi-config — simpan preset untuk berbagai jenis stream
 - ✅ Config hot-reload — edit config saat server jalan, langsung update di OBS
 - ✅ Message replay — client baru langsung dapat chat terakhir (tidak blank)
@@ -46,25 +41,28 @@ cd ~/youtube-chat-overlay && bun start.js
 
 ## Multi-Config
 
-Setiap config disimpan di folder `configs/` sebagai file JSON terpisah. `config.json` adalah symlink ke config aktif.
+Setiap config disimpan di folder `configs/` sebagai file JSON terpisah. `config.json` menunjuk ke config aktif via symlink jika OS mengizinkan; kalau tidak, launcher fallback ke copy. Nama config hanya boleh huruf, angka, dash, dan underscore.
 
 ```
 configs/
-├── default.json       ← config bawaan
+├── default.json       ← dibuat otomatis dari template
 ├── tournament.json    ← preset turnamen
-└── podcast.json       ← preset podcast (contoh)
-config.json            → symlink ke configs/tournament.json (aktif)
+└── podcast.json       ← preset podcast
+config.json            → config aktif
+.active-config         → nama config aktif
 ```
+
+File `configs/*.json`, `config.json`, dan `.active-config` adalah user data dan tidak di-track git, supaya update tidak overwrite preset user.
 
 ### Pindah Config
 
 ```bash
-bun setup.js          # Menu → Switch config → pilih
+bun start.js --setup   # Menu → Switch config → pilih
 ```
 
-Atau langsung di `start.sh` — ada config picker interaktif setiap kali start.
+Atau pilih **Manage configs / GIFs** dari menu utama `bun start.js`.
 
-## Setup Wizard (`bun setup.js`)
+## Setup Wizard (`bun start.js --setup`)
 
 Menu utama:
 
@@ -76,17 +74,27 @@ Menu utama:
 5) Manage GIFs            — tambah trigger, hapus, import dari URL
 ```
 
+`bun setup.js` masih tersedia sebagai compatibility wrapper ke `bun start.js --setup`.
+
 ### GIF Manager
 
 ```
 ─── GIF Manager ───
-  Files go in:  public/gifs/
   Trigger → File:
     cat → /gifs/happycat.gif
     pog → /gifs/pogchamp.gif
+
+  Files in public/gifs/:
+    - happycat.gif
+    - pogchamp.gif
+
+  1) Add GIF trigger       ← hubungkan kata ke file GIF
+  2) Remove GIF trigger     ← lepas trigger
+  3) Import GIF from URL    ← download + langsung pasang trigger
+  0) Back
 ```
 
-Taruh file `.gif` / `.png` / `.webp` di folder `public/gifs/`, lalu assign trigger word lewat menu. Atau pakai **Import GIF from URL** buat download langsung.
+Tambahkan file GIF sendiri ke `public/gifs/`, lalu assign trigger lewat menu option 1. Atau import dari URL via option 3.
 
 ## Configuration
 
@@ -123,7 +131,8 @@ Taruh file `.gif` / `.png` / `.webp` di folder `public/gifs/`, lalu assign trigg
 ```bash
 git clone https://github.com/farizvect/youtube-chat-overlay.git
 cd youtube-chat-overlay
-bash install.sh
+bun install
+bun start.js
 ```
 
 ## OBS Setup
@@ -138,18 +147,18 @@ bash install.sh
 ## File Structure
 
 ```
+├── start.js               # Launcher + setup + config/GIF manager
 ├── server.js              # HTTP + WebSocket server
-├── setup.js               # Interactive config + GIF wizard
+├── setup.js               # Compatibility wrapper ke start.js --setup
 ├── config.template.json   # Template config
-├── config.json            → symlink ke configs/<active>.json
-├── configs/               # Semua config disini
-│   ├── default.json
-│   └── tournament.json
+├── config.json            # User config aktif, gitignored
+├── .active-config         # Nama config aktif, gitignored
+├── configs/               # User configs, gitignored
+│   └── .gitkeep
 ├── install.sh             # One-line installer (Linux/macOS)
 ├── install.ps1            # One-line installer (Windows)
-├── start.js               # Interactive launcher (all platforms)
-├── start.sh               # Shell wrapper → start.js
-├── start.ps1              # PowerShell wrapper → start.js
+├── start.sh               # Compatibility wrapper (Linux/macOS)
+├── start.ps1              # Compatibility wrapper (Windows)
 ├── package.json
 ├── public/
 │   ├── index.html         # Browser source page

@@ -1,5 +1,8 @@
 # User config (gitignored)
 config.json
+.active-config
+configs/*.json
+!configs/.gitkeep
 
 # Dependencies
 node_modules/
