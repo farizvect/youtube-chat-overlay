@@ -75,6 +75,6 @@ Write-Host "╔═════════════════════�
 Write-Host "║   ✅ Installation complete!                  ║"
 Write-Host "║                                              ║"
 Write-Host "║   To start:                                  ║"
-Write-Host "║     cd $InstallDir; .\start.ps1              ║"
+Write-Host "║     cd $InstallDir; bun start.js             ║"
 Write-Host "╚══════════════════════════════════════════════╝"
 Write-Host ""

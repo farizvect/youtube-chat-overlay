@@ -59,6 +59,6 @@ echo "╔═══════════════════════�
 echo "║   ✅ Installation complete!                  ║"
 echo "║                                              ║"
 echo "║   To start:                                  ║"
-echo "║     cd $INSTALL_DIR && bash start.sh         ║"
+echo "║     cd $INSTALL_DIR && bun start.js          ║"
 echo "╚══════════════════════════════════════════════╝"
 echo ""

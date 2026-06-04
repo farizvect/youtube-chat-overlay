@@ -105,8 +105,8 @@ ${c(COLORS.red, "  ╚═══════════════════�
   // ── Outro ──
   console.log("");
   console.log(`${c(COLORS.green, "  ✅")}  Install beres! Tinggal jalanin:`);
-  console.log(`\n      ${c(COLORS.cyan, "bash start.sh")}    ${c(COLORS.dim, "# Linux/macOS")}`);
-  console.log(`      ${c(COLORS.cyan, ".\\start.ps1")}    ${c(COLORS.dim, "# Windows PowerShell")}`);
+  console.log(`\n      ${c(COLORS.cyan, "bun start.js")}    ${c(COLORS.dim, "# pilih config pake arrow key")}`);
+  console.log(`      ${c(COLORS.cyan, "bash start.sh")}   ${c(COLORS.dim, "# atau lewat shell wrapper")}`);
   console.log("");
   console.log(`  ${c(COLORS.dim, "Happy streaming! 🎬")}`);
   console.log("");
