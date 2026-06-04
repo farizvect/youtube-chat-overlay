@@ -3,7 +3,7 @@
 # Update:        run the same command again
 
 param(
-    [string]$InstallDir = "$HOME\youtube-chat-overlay"
+    [string]$InstallDir = "$env:USERPROFILE\youtube-chat-overlay"
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,28 +15,38 @@ Write-Host "║   YouTube Live Chat OBS Overlay              ║"
 Write-Host "╚══════════════════════════════════════════════╝"
 Write-Host ""
 
-# Find bun — try PATH first, then known locations
-function Find-Bun {
-    $known = @(
-        "$HOME\.bun\bin",
-        "$env:ProgramFiles\bun"
-    )
-    foreach ($p in $known) {
-        if ((Test-Path $p) -and ($env:Path -notlike "*$p*")) {
-            $env:Path = "$p;$env:Path"
-        }
+function Add-PathIfExists {
+    param([string]$Path)
+    if ($Path -and (Test-Path $Path) -and ($env:Path -notlike "*$Path*")) {
+        $env:Path = "$Path;$env:Path"
     }
+}
+
+# Find bun — try PATH first, then common install locations.
+function Find-Bun {
+    $profileDirs = @(
+        $env:USERPROFILE,
+        $HOME,
+        [Environment]::GetFolderPath("UserProfile")
+    ) | Where-Object { $_ } | Select-Object -Unique
+
+    foreach ($dir in $profileDirs) {
+        Add-PathIfExists "$dir\.bun\bin"
+    }
+    Add-PathIfExists "$env:ProgramFiles\bun"
 
     $cmd = Get-Command bun -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
 
-    $bins = @(
-        "$HOME\.bun\bin\bun.exe",
-        "$HOME\.bun\bin\bun",
-        "$env:ProgramFiles\bun\bun.exe"
-    )
-    foreach ($b in $bins) {
-        if (Test-Path $b) { return $b }
+    $bins = @()
+    foreach ($dir in $profileDirs) {
+        $bins += "$dir\.bun\bin\bun.exe"
+        $bins += "$dir\.bun\bin\bun"
+    }
+    $bins += "$env:ProgramFiles\bun\bun.exe"
+
+    foreach ($b in ($bins | Select-Object -Unique)) {
+        if ($b -and (Test-Path $b)) { return $b }
     }
     return $null
 }
@@ -48,11 +58,16 @@ if ($bunExe) {
 } else {
     Write-Host "📦 Installing Bun..."
     irm https://bun.sh/install.ps1 | iex
-    $env:Path = "$HOME\.bun\bin;$env:Path"
+
+    # Bun installer writes to USERPROFILE\.bun\bin. Refresh current-process PATH.
+    Add-PathIfExists "$env:USERPROFILE\.bun\bin"
+    Add-PathIfExists "$HOME\.bun\bin"
+
     $bunExe = Find-Bun
     if (-not $bunExe) {
-        Write-Host "❌ Bun install failed — try restarting PowerShell and re-run."
-        Write-Host "   Or install manually: irm https://bun.sh/install.ps1 | iex"
+        Write-Host "❌ Bun install finished, but bun.exe was not found in this PowerShell session."
+        Write-Host "   Expected: $env:USERPROFILE\.bun\bin\bun.exe"
+        Write-Host "   Try opening a new PowerShell and re-run the installer."
         exit 1
     }
     Write-Host "✅ Bun installed: $(& $bunExe --version)"
@@ -104,7 +119,7 @@ if (Test-Path "$InstallDir\.git") {
 # Install/update dependencies
 Write-Host ""
 Write-Host "📦 Installing dependencies..."
-bun install --ignore-scripts
+bun install
 Write-Host "✅ Dependencies installed"
 
 Write-Host ""
