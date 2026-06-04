@@ -126,7 +126,89 @@ Tambahkan file GIF sendiri ke `public/gifs/`, lalu assign trigger lewat menu opt
 }
 ```
 
-## Manual Setup (alternative)
+## Manual Install (alternative)
+
+Use this if the one-line installer fails or you prefer doing it manually.
+
+### 1. Install Bun
+
+Download and install Bun from:
+
+```text
+https://bun.sh/docs/installation
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://bun.sh/install.ps1 | iex
+```
+
+Linux / macOS:
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+After installing, open a new terminal and verify:
+
+```bash
+bun --version
+```
+
+### 2. Download ZIP
+
+Download the project ZIP:
+
+```text
+https://github.com/farizvect/youtube-chat-overlay/archive/refs/heads/main.zip
+```
+
+Extract it, then rename the extracted folder from:
+
+```text
+youtube-chat-overlay-main
+```
+
+to:
+
+```text
+youtube-chat-overlay
+```
+
+### 3. Install dependencies
+
+Open terminal inside the extracted folder.
+
+Windows PowerShell example:
+
+```powershell
+cd $env:USERPROFILE\Downloads\youtube-chat-overlay
+bun install
+```
+
+Linux / macOS example:
+
+```bash
+cd ~/Downloads/youtube-chat-overlay
+bun install
+```
+
+### 4. Run
+
+```bash
+bun start.js
+```
+
+For setup only:
+
+```bash
+bun start.js --setup
+```
+
+### Git clone alternative
+
+If Git is installed, you can use clone instead of ZIP:
 
 ```bash
 git clone https://github.com/farizvect/youtube-chat-overlay.git
