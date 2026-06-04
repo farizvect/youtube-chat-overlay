@@ -17,36 +17,56 @@ Write-Host ""
 
 function Add-PathIfExists {
     param([string]$Path)
-    if ($Path -and (Test-Path $Path) -and ($env:Path -notlike "*$Path*")) {
+    if ($Path -and (Test-Path -LiteralPath $Path) -and ($env:Path -notlike "*$Path*")) {
         $env:Path = "$Path;$env:Path"
     }
 }
 
-# Find bun — try PATH first, then common install locations.
-function Find-Bun {
+function Get-BunCandidatePaths {
     $profileDirs = @(
         $env:USERPROFILE,
         $HOME,
         [Environment]::GetFolderPath("UserProfile")
     ) | Where-Object { $_ } | Select-Object -Unique
 
-    foreach ($dir in $profileDirs) {
-        Add-PathIfExists "$dir\.bun\bin"
-    }
-    Add-PathIfExists "$env:ProgramFiles\bun"
-
-    $cmd = Get-Command bun -ErrorAction SilentlyContinue
-    if ($cmd) { return $cmd.Source }
+    $installDirs = @()
+    if ($env:BUN_INSTALL) { $installDirs += $env:BUN_INSTALL }
+    foreach ($dir in $profileDirs) { $installDirs += (Join-Path $dir ".bun") }
+    if ($env:ProgramFiles) { $installDirs += (Join-Path $env:ProgramFiles "bun") }
 
     $bins = @()
-    foreach ($dir in $profileDirs) {
-        $bins += "$dir\.bun\bin\bun.exe"
-        $bins += "$dir\.bun\bin\bun"
+    foreach ($dir in ($installDirs | Where-Object { $_ } | Select-Object -Unique)) {
+        $bins += (Join-Path $dir "bin\bun.exe")
+        $bins += (Join-Path $dir "bin\bun")
+        $bins += (Join-Path $dir "bun.exe")
     }
-    $bins += "$env:ProgramFiles\bun\bun.exe"
+    return $bins | Select-Object -Unique
+}
 
-    foreach ($b in ($bins | Select-Object -Unique)) {
-        if ($b -and (Test-Path $b)) { return $b }
+# Find bun — try PATH first, then common install locations.
+function Find-Bun {
+    foreach ($b in (Get-BunCandidatePaths)) {
+        $dir = Split-Path -Parent $b
+        Add-PathIfExists $dir
+    }
+
+    $cmd = Get-Command bun -ErrorAction SilentlyContinue
+    if ($cmd -and $cmd.Source -and (Test-Path -LiteralPath $cmd.Source)) { return $cmd.Source }
+
+    foreach ($b in (Get-BunCandidatePaths)) {
+        if ($b -and (Test-Path -LiteralPath $b)) {
+            return (Resolve-Path -LiteralPath $b).Path
+        }
+    }
+    return $null
+}
+
+function Wait-ForBun {
+    param([int]$Attempts = 20)
+    for ($i = 1; $i -le $Attempts; $i++) {
+        $found = Find-Bun
+        if ($found) { return $found }
+        Start-Sleep -Milliseconds 500
     }
     return $null
 }
@@ -59,14 +79,19 @@ if ($bunExe) {
     Write-Host "📦 Installing Bun..."
     irm https://bun.sh/install.ps1 | iex
 
-    # Bun installer writes to USERPROFILE\.bun\bin. Refresh current-process PATH.
-    Add-PathIfExists "$env:USERPROFILE\.bun\bin"
-    Add-PathIfExists "$HOME\.bun\bin"
+    # Bun installer usually writes to USERPROFILE\.bun and sets BUN_INSTALL.
+    # Refresh current-process PATH and retry because the executable can appear
+    # a moment after the installer subprocess returns on Windows.
+    if (-not $env:BUN_INSTALL) { $env:BUN_INSTALL = (Join-Path $env:USERPROFILE ".bun") }
+    Add-PathIfExists (Join-Path $env:BUN_INSTALL "bin")
+    Add-PathIfExists (Join-Path $env:USERPROFILE ".bun\bin")
+    Add-PathIfExists (Join-Path $HOME ".bun\bin")
 
-    $bunExe = Find-Bun
+    $bunExe = Wait-ForBun
     if (-not $bunExe) {
         Write-Host "❌ Bun install finished, but bun.exe was not found in this PowerShell session."
-        Write-Host "   Expected: $env:USERPROFILE\.bun\bin\bun.exe"
+        Write-Host "   Checked paths:"
+        foreach ($p in (Get-BunCandidatePaths)) { Write-Host "   - $p" }
         Write-Host "   Try opening a new PowerShell and re-run the installer."
         exit 1
     }
