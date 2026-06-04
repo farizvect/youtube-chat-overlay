@@ -15,13 +15,15 @@ echo ""
 echo "  Install to: $INSTALL_DIR"
 echo ""
 
-# Check/install Bun
+# Find/install Bun — check PATH first, then known locations
+BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+export PATH="$BUN_INSTALL/bin:$HOME/.bun/bin:/usr/local/bin:$PATH"
+
 if command -v bun &>/dev/null; then
     echo "✅ Bun found: $(bun --version)"
 else
     echo "📦 Installing Bun..."
     curl -fsSL https://bun.sh/install | bash
-    export BUN_INSTALL="$HOME/.bun"
     export PATH="$BUN_INSTALL/bin:$PATH"
     echo "✅ Bun installed: $(bun --version)"
 fi
