@@ -71,6 +71,7 @@ if [ "$CHOICE" = "2" ]; then
     echo ""
     echo "🚀 Starting with config: $SELECTED | channel: $CHANNEL"
     echo "   OBS Browser Source URL: http://localhost:6969"
+    echo "   💡 GIFs go in: public/gifs/"
     echo ""
     exec bun "$SCRIPT_DIR/server.js" --channel="$CHANNEL"
 else
@@ -78,6 +79,7 @@ else
     echo ""
     echo "🚀 Starting with config: $SELECTED | live: $LIVE_ID"
     echo "   OBS Browser Source URL: http://localhost:6969"
+    echo "   💡 GIFs go in: public/gifs/"
     echo ""
     exec bun "$SCRIPT_DIR/server.js" --live="$LIVE_ID"
 fi

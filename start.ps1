@@ -85,6 +85,7 @@ if ($srcChoice -eq "2") {
     Write-Host ""
     Write-Host "🚀 Starting with config: $Selected | channel: $channel"
     Write-Host "   OBS Browser Source URL: http://localhost:6969"
+    Write-Host "   💡 GIFs go in: public/gifs/"
     Write-Host ""
     & bun "$ScriptDir\server.js" "--channel=$channel"
 } else {
@@ -92,6 +93,7 @@ if ($srcChoice -eq "2") {
     Write-Host ""
     Write-Host "🚀 Starting with config: $Selected | live: $liveId"
     Write-Host "   OBS Browser Source URL: http://localhost:6969"
+    Write-Host "   💡 GIFs go in: public/gifs/"
     Write-Host ""
     & bun "$ScriptDir\server.js" "--live=$liveId"
 }
