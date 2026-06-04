@@ -5,7 +5,6 @@
     "start": "bun server.js"
   },
   "dependencies": {
-    "obs-websocket-js": "^5.0.7",
     "youtube-chat": "^2.2.0"
   }
 }
