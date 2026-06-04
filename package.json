@@ -2,7 +2,9 @@
   "name": "youtube-chat-overlay",
   "type": "module",
   "scripts": {
-    "start": "bun server.js"
+    "start": "bun server.js",
+    "setup": "bun setup.js",
+    "install": "bash install.sh"
   },
   "dependencies": {
     "youtube-chat": "^2.2.0"
