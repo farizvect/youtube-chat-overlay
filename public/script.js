@@ -20,6 +20,9 @@ let config = {
 // Track loaded fonts to avoid reloading
 let loadedFont = "";
 
+// Precompiled custom GIF regexes (built once on config load)
+let gifRegexes = [];
+
 // WebSocket connection
 let ws;
 let reconnectAttempts = 0;
@@ -41,6 +44,12 @@ function connect() {
             config = { ...config, ...data.config };
             console.log('Config updated:', config);
             applyStyles();
+            // Precompile GIF regexes
+            gifRegexes = Object.entries(config.customGifs).map(([keyword, url]) => ({
+                regex: new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'),
+                url,
+                keyword,
+            }));
         } else if (data.type === 'chat') {
             addChatMessage(data.message);
         }
@@ -261,10 +270,9 @@ function processPlainText(text) {
     // Escape HTML first
     let processed = escapeHtml(text);
 
-    // Replace custom GIF keywords
-    for (const [keyword, gifUrl] of Object.entries(config.customGifs)) {
-        const regex = new RegExp(`\\b${escapeRegex(keyword)}\\b`, 'gi');
-        processed = processed.replace(regex, `<img src="${escapeAttr(gifUrl)}" class="custom-gif" alt="${escapeAttr(keyword)}">`);
+    // Replace custom GIF keywords (precompiled regexes)
+    for (const { regex, url, keyword } of gifRegexes) {
+        processed = processed.replace(regex, `<img src="${escapeAttr(url)}" class="custom-gif" alt="${escapeAttr(keyword)}">`);
     }
 
     return processed;

@@ -17,6 +17,16 @@ for (const arg of args) {
     }
 }
 
+// Validate arguments
+if (channelId && !channelId.startsWith("@")) {
+    console.error("❌ Channel must start with @ (e.g., --channel=@CHANNEL_NAME)");
+    process.exit(1);
+}
+if (liveId && !/^[a-zA-Z0-9_-]{11}$/.test(liveId)) {
+    console.error("❌ Invalid live video ID format (should be 11 chars)");
+    process.exit(1);
+}
+
 // Broadcast message to all connected clients
 function broadcast(data) {
     const message = JSON.stringify(data);
@@ -299,8 +309,13 @@ startLiveChat();
 // Handle process termination
 process.on("SIGINT", () => {
     console.log("\n👋 Shutting down...");
+    for (const client of clients) {
+        client.close(1001, "Server shutting down");
+    }
+    clients.clear();
     if (liveChat) {
         liveChat.stop();
     }
+    server.stop();
     process.exit(0);
 });
