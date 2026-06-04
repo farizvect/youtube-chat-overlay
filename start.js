@@ -12,7 +12,7 @@ import {
 } from "fs";
 import { basename, join } from "path";
 import { spawn } from "child_process";
-import { createInterface } from "readline";
+import { select, input, confirm } from "@inquirer/prompts";
 
 const ROOT = import.meta.dir;
 const CONFIGS_DIR = join(ROOT, "configs");
@@ -22,16 +22,13 @@ const LINK_PATH = join(ROOT, "config.json");
 const ACTIVE_PATH = join(ROOT, ".active-config");
 
 const FONTS = ["Roboto", "Inter", "Poppins", "Nunito", "Open Sans", "Montserrat"];
-const BG_PRESETS = {
-    "1": { name: "Dark (default)", color: "rgba(50, 50, 68, 0.9)" },
-    "2": { name: "Solid black", color: "rgba(0, 0, 0, 0.85)" },
-    "3": { name: "Dark purple", color: "rgba(30, 30, 50, 0.9)" },
-    "4": { name: "Transparent (no background)", color: "transparent" },
-    "5": { name: "Custom", color: null },
-};
-
-const rl = createInterface({ input: process.stdin, output: process.stdout });
-const ask = (q) => new Promise(resolve => rl.question(q, resolve));
+const BG_PRESETS = [
+    { name: "🌙 Dark (default)", value: { color: "rgba(50, 50, 68, 0.9)", noBackground: false } },
+    { name: "⬛ Solid black", value: { color: "rgba(0, 0, 0, 0.85)", noBackground: false } },
+    { name: "🟣 Dark purple", value: { color: "rgba(30, 30, 50, 0.9)", noBackground: false } },
+    { name: "👻 Transparent (no background)", value: { color: "transparent", noBackground: true } },
+    { name: "🎨 Custom RGBA", value: { color: null, noBackground: false } },
+];
 
 function ensureDirs() {
     mkdirSync(CONFIGS_DIR, { recursive: true });
@@ -125,71 +122,83 @@ function listGifFiles() {
     return readdirSync(GIFS_DIR).filter(f => /\.(gif|png|webp)$/i.test(f));
 }
 
-async function promptConfigName(message) {
-    const name = (await ask(message)).trim();
-    if (!name) return "";
-    if (!validConfigName(name)) {
-        console.log("❌ Use only letters, numbers, dash, or underscore. Max 64 chars.");
-        return "";
-    }
-    return name;
-}
+// ─── Edit Config Wizard ───
 
 async function editConfig(name) {
     const cfg = loadConfig(name);
 
-    console.log("");
-    console.log(`─── Editing: ${name} ───`);
-    console.log("Press Enter to keep current values.");
-    console.log("");
+    console.log(`\n✏️  Editing: ${name}`);
+    console.log("   Press Enter to keep current values.\n");
 
-    console.log("Font choices:");
-    FONTS.forEach((f, i) => console.log(`  ${i + 1}) ${f}`));
-    const currentFontIdx = Math.max(FONTS.indexOf(cfg.fontFamily) + 1, 1);
-    const fontChoice = await ask(`Font [1-${FONTS.length}, default=${currentFontIdx}]: `);
-    const idx = parseInt(fontChoice, 10) - 1;
-    if (idx >= 0 && idx < FONTS.length) cfg.fontFamily = FONTS[idx];
+    // Font
+    const fontIdx = FONTS.indexOf(cfg.fontFamily);
+    cfg.fontFamily = await select({
+        message: "🔤 Font:",
+        choices: FONTS.map(f => ({ name: f, value: f })),
+        default: fontIdx >= 0 ? fontIdx : 0,
+    });
 
-    const size = await ask(`Font size [default=${cfg.fontSize}]: `);
-    const sizeNum = parseInt(size, 10);
-    if (sizeNum >= 12 && sizeNum <= 32) cfg.fontSize = sizeNum;
+    // Font size
+    const sizeStr = await input({
+        message: "📏 Font size (12-32):",
+        default: String(cfg.fontSize || 16),
+        validate: v => {
+            const n = parseInt(v, 10);
+            return (n >= 12 && n <= 32) ? true : "Must be between 12 and 32";
+        },
+    });
+    cfg.fontSize = parseInt(sizeStr, 10);
 
-    console.log("");
-    console.log("Background style:");
-    Object.entries(BG_PRESETS).forEach(([k, v]) => console.log(`  ${k}) ${v.name}`));
-    const bgChoice = await ask("Choice [1-5, default=1]: ");
-    if (bgChoice === "4") {
+    // Background
+    const bg = await select({
+        message: "🎨 Background style:",
+        choices: BG_PRESETS,
+    });
+    if (bg.noBackground) {
         cfg.noBackground = true;
-    } else if (bgChoice === "5") {
-        const custom = await ask("Enter RGBA color (e.g. rgba(20,20,30,0.8)): ");
-        if (custom) {
-            cfg.backgroundColor = custom;
-            cfg.noBackground = false;
-        }
-    } else if (BG_PRESETS[bgChoice]) {
-        cfg.backgroundColor = BG_PRESETS[bgChoice].color;
+    } else if (bg.color === null) {
+        const custom = await input({
+            message: "🎨 RGBA color:",
+            default: cfg.backgroundColor || "rgba(20,20,30,0.8)",
+        });
+        cfg.backgroundColor = custom;
+        cfg.noBackground = false;
+    } else {
+        cfg.backgroundColor = bg.color;
         cfg.noBackground = false;
     }
 
-    const inline = await ask(`Inline chat mode? [${cfg.inlineChat ? "Y/n" : "y/N"}]: `);
-    if (inline.trim()) cfg.inlineChat = inline.toLowerCase() === "y";
+    // Inline mode
+    cfg.inlineChat = await confirm({
+        message: "💬 Inline chat mode? (username: message on same line)",
+        default: cfg.inlineChat || false,
+    });
 
-    console.log("");
-    console.log("Message position:");
-    console.log("  1) Bottom-left (default)");
-    console.log("  2) Bottom-center");
-    console.log("  3) Bottom-right");
-    const posMap = { "1": "bottom-left", "2": "bottom-center", "3": "bottom-right" };
-    const currentPos = Object.entries(posMap).find(([, v]) => v === (cfg.position || "bottom-left"))?.[0] || "1";
-    const posChoice = await ask(`Choice [1-3, default=${currentPos}]: `);
-    if (posMap[posChoice]) cfg.position = posMap[posChoice];
+    // Position
+    const posChoices = [
+        { name: "↙️  Bottom-left (default)", value: "bottom-left" },
+        { name: "⬇️  Bottom-center", value: "bottom-center" },
+        { name: "↘️  Bottom-right", value: "bottom-right" },
+    ];
+    cfg.position = await select({
+        message: "📌 Message position:",
+        choices: posChoices,
+        default: posChoices.findIndex(p => p.value === (cfg.position || "bottom-left")),
+    });
 
-    const scDuration = await ask(`Super Chat duration multiplier [default=${cfg.superChatDuration || 3}]: `);
-    const scNum = parseInt(scDuration, 10);
-    if (scNum >= 1 && scNum <= 10) cfg.superChatDuration = scNum;
+    // Super Chat duration
+    const scStr = await input({
+        message: "⭐ Super Chat duration multiplier (1-10):",
+        default: String(cfg.superChatDuration || 3),
+        validate: v => {
+            const n = parseInt(v, 10);
+            return (n >= 1 && n <= 10) ? true : "Must be between 1 and 10";
+        },
+    });
+    cfg.superChatDuration = parseInt(scStr, 10);
 
     saveConfig(name, cfg);
-    console.log(`✅ Config "${name}" saved`);
+    console.log(`\n✅ Config "${name}" saved`);
 
     try {
         const port = cfg.port || 6969;
@@ -200,6 +209,8 @@ async function editConfig(name) {
     }
 }
 
+// ─── GIF Manager ───
+
 async function gifManager() {
     while (true) {
         const active = getActiveConfig();
@@ -207,114 +218,125 @@ async function gifManager() {
         const gifs = cfg.customGifs || {};
         const gifFiles = listGifFiles();
 
-        console.log("");
-        console.log("─── GIF Manager ───");
-        console.log(`  Config: ${active}`);
-        console.log("");
-        if (Object.keys(gifs).length === 0) {
-            console.log("  No GIF triggers configured.");
+        console.log(`\n🎞️  GIF Manager — config: ${active}`);
+
+        if (Object.keys(gifs).length > 0) {
+            console.log("   Triggers:");
+            Object.entries(gifs).forEach(([k, v]) => console.log(`     ${k} → ${v}`));
         } else {
-            console.log("  Trigger → File:");
-            Object.entries(gifs).forEach(([k, v]) => console.log(`    ${k} → ${v}`));
+            console.log("   No GIF triggers configured.");
         }
-        console.log("");
+
         if (gifFiles.length > 0) {
-            console.log("  Files in public/gifs/:");
-            gifFiles.forEach(f => console.log(`    - ${f}`));
-        } else {
-            console.log("  No GIF files in public/gifs/");
+            console.log("   Files:");
+            gifFiles.forEach(f => console.log(`     📁 ${f}`));
         }
-        console.log("");
-        console.log("  1) Add GIF trigger");
-        console.log("  2) Remove GIF trigger");
-        console.log("  3) Import GIF from URL");
-        console.log("  0) Back");
-        console.log("");
 
-        const choice = await ask("Choice [0-3]: ");
-        if (choice === "0") break;
+        const action = await select({
+            message: "GIF Manager:",
+            choices: [
+                { name: "➕ Add GIF trigger", value: "add" },
+                { name: "➖ Remove GIF trigger", value: "remove" },
+                { name: "📥 Import GIF from URL", value: "import" },
+                { name: "🔙 Back", value: "back" },
+            ],
+        });
 
-        if (choice === "1") {
-            const keyword = (await ask("Trigger word: ")).trim();
-            if (!keyword) continue;
+        if (action === "back") break;
+
+        if (action === "add") {
             if (gifFiles.length === 0) {
-                console.log("❌ No GIF files. Import one first (option 3).");
+                console.log("\n❌ No GIF files. Import one first.");
                 continue;
             }
-            console.log("Available files:");
-            gifFiles.forEach(f => console.log(`  ${f}`));
-            const file = (await ask("Filename (e.g. happycat.gif): ")).trim();
-            if (!gifFiles.includes(file)) {
-                console.log("❌ File not found in public/gifs/");
-                continue;
-            }
-            gifs[keyword] = `/gifs/${file}`;
+            const keyword = await input({
+                message: "Trigger word:",
+                validate: v => v.trim() ? true : "Cannot be empty",
+            });
+            const file = await select({
+                message: "Pick a GIF file:",
+                choices: gifFiles.map(f => ({ name: `📁 ${f}`, value: f })),
+            });
+            gifs[keyword.trim()] = `/gifs/${file}`;
             cfg.customGifs = gifs;
             saveConfig(active, cfg);
-            console.log(`✅ Added: "${keyword}" → /gifs/${file}`);
-            continue;
+            console.log(`\n✅ Added: "${keyword}" → /gifs/${file}`);
         }
 
-        if (choice === "2") {
-            const keyword = (await ask("Trigger word to remove: ")).trim();
-            if (!keyword || !gifs[keyword]) {
-                console.log("❌ Not found.");
+        if (action === "remove") {
+            if (Object.keys(gifs).length === 0) {
+                console.log("\n❌ No triggers to remove.");
                 continue;
             }
+            const keyword = await select({
+                message: "Trigger to remove:",
+                choices: Object.keys(gifs).map(k => ({ name: `${k} → ${gifs[k]}`, value: k })),
+            });
             delete gifs[keyword];
             cfg.customGifs = gifs;
             saveConfig(active, cfg);
-            console.log(`✅ Removed: "${keyword}"`);
-            continue;
+            console.log(`\n✅ Removed: "${keyword}"`);
         }
 
-        if (choice === "3") {
-            const url = (await ask("GIF URL (must be .gif/.png/.webp): ")).trim();
-            if (!url) continue;
+        if (action === "import") {
+            const url = await input({
+                message: "GIF URL (.gif/.png/.webp):",
+                validate: v => v.trim() ? true : "Cannot be empty",
+            });
             const filename = url.split("/").pop()?.split("?")[0] || "imported.gif";
             if (!/^[a-zA-Z0-9_.-]+\.(gif|png|webp)$/i.test(filename)) {
-                console.log("❌ Filename must be .gif, .png, or .webp and cannot contain paths.");
+                console.log("\n❌ Filename must be .gif, .png, or .webp");
                 continue;
             }
             const dest = join(GIFS_DIR, filename);
-            console.log(`Downloading ${filename}...`);
+            console.log(`\n📥 Downloading ${filename}...`);
             try {
                 const resp = await fetch(url);
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const buf = await resp.arrayBuffer();
                 writeFileSync(dest, Buffer.from(buf));
                 console.log(`✅ Downloaded to public/gifs/${filename}`);
-                const keyword = (await ask("Trigger word for this GIF: ")).trim();
-                if (keyword) {
-                    gifs[keyword] = `/gifs/${filename}`;
+                const useNow = await confirm({
+                    message: "Add a trigger for this GIF now?",
+                    default: true,
+                });
+                if (useNow) {
+                    const keyword = await input({
+                        message: "Trigger word:",
+                        validate: v => v.trim() ? true : "Cannot be empty",
+                    });
+                    gifs[keyword.trim()] = `/gifs/${filename}`;
                     cfg.customGifs = gifs;
                     saveConfig(active, cfg);
-                    console.log(`✅ Added: "${keyword}" → /gifs/${filename}`);
+                    console.log(`\n✅ Added: "${keyword}" → /gifs/${filename}`);
                 }
             } catch (e) {
-                console.log(`❌ Download failed: ${e.message}`);
+                console.log(`\n❌ Download failed: ${e.message}`);
             }
         }
     }
 }
 
+// ─── Config Manager ───
+
 async function createConfig() {
-    const name = await promptConfigName("New config name: ");
-    if (!name) return;
+    const name = await input({
+        message: "📝 New config name:",
+        validate: v => {
+            if (!v.trim()) return "Cannot be empty";
+            if (!validConfigName(v.trim())) return "Only letters, numbers, dash, underscore. Max 64 chars.";
+            if (existsSync(configPath(v.trim()))) return `Config "${v.trim()}" already exists.`;
+            return true;
+        },
+    });
 
-    const path = configPath(name);
-    if (existsSync(path)) {
-        console.log(`❌ Config "${name}" already exists.`);
-        return;
-    }
+    writeFileSync(configPath(name.trim()), JSON.stringify(templateConfig(), null, 4));
+    console.log(`\n✅ Created config: ${name.trim()}`);
 
-    writeFileSync(path, JSON.stringify(templateConfig(), null, 4));
-    console.log(`✅ Created config: ${name}`);
-
-    const sw = await ask("Switch to it now? [Y/n]: ");
-    if (sw.toLowerCase() !== "n") {
-        activateConfig(name);
-        console.log(`✅ Switched to config: ${name}`);
+    const sw = await confirm({ message: "Switch to it now?", default: true });
+    if (sw) {
+        activateConfig(name.trim());
+        console.log(`✅ Switched to config: ${name.trim()}`);
     }
 }
 
@@ -323,121 +345,108 @@ async function manageConfigs() {
         const active = getActiveConfig();
         const configs = listConfigs();
 
-        console.log("");
-        console.log("─── Config Manager ───");
-        console.log(`  Active config: ${active}`);
-        console.log("");
-        console.log("  1) Edit current config");
-        console.log("  2) Switch config");
-        console.log("  3) Create new config");
-        console.log("  4) Delete config");
-        console.log("  5) Manage GIFs");
-        console.log("  0) Back");
-        console.log("");
+        console.log(`\n⚙️  Config Manager — active: ${active}`);
 
-        const choice = await ask("Choice [0-5]: ");
-        if (choice === "0") break;
+        const action = await select({
+            message: "What do you want to do?",
+            choices: [
+                { name: "✏️  Edit current config", value: "edit" },
+                { name: "🔄 Switch config", value: "switch" },
+                { name: "➕ Create new config", value: "create" },
+                { name: "🗑️  Delete config", value: "delete" },
+                { name: "🎞️  Manage GIFs", value: "gifs" },
+                { name: "🔙 Back", value: "back" },
+            ],
+        });
 
-        if (choice === "1") {
+        if (action === "back") break;
+
+        if (action === "edit") {
             await editConfig(active);
-            continue;
         }
 
-        if (choice === "2") {
-            console.log("\nAvailable configs:");
-            configs.forEach(c => console.log(`  - ${c}${c === active ? " ← active" : ""}`));
-            const name = await promptConfigName("\nConfig name to switch to: ");
-            if (name && configs.includes(name)) {
-                activateConfig(name);
-                console.log(`✅ Switched to config: ${name}`);
-            } else if (name) {
-                console.log("❌ Config not found.");
-            }
-            continue;
+        if (action === "switch") {
+            const choices = configs.map(c => ({
+                name: `${c === active ? "✅ " : "   "}${c}`,
+                value: c,
+            }));
+            const name = await select({
+                message: "Switch to:",
+                choices,
+            });
+            activateConfig(name);
+            console.log(`\n✅ Switched to config: ${name}`);
         }
 
-        if (choice === "3") {
+        if (action === "create") {
             await createConfig();
-            continue;
         }
 
-        if (choice === "4") {
+        if (action === "delete") {
             if (configs.length <= 1) {
-                console.log("❌ Cannot delete the only config.");
+                console.log("\n❌ Cannot delete the only config.");
                 continue;
             }
-            console.log("\nConfigs:");
-            configs.forEach(c => console.log(`  - ${c}${c === active ? " ← active" : ""}`));
-            const name = await promptConfigName("\nConfig name to delete: ");
-            if (!name) continue;
-            if (name === "default") {
-                console.log("❌ Cannot delete default config.");
-                continue;
-            }
-            if (!configs.includes(name)) {
-                console.log("❌ Config not found.");
-                continue;
-            }
+            const deletable = configs.filter(c => c !== "default").map(c => ({
+                name: `${c === active ? "📌 " : "   "}${c}`,
+                value: c,
+            }));
+            const name = await select({
+                message: "Config to delete:",
+                choices: deletable,
+            });
             unlinkSync(configPath(name));
             if (name === active) {
                 activateConfig("default");
-                console.log(`✅ Deleted "${name}" — switched to default`);
+                console.log(`\n✅ Deleted "${name}" — switched to default`);
             } else {
-                console.log(`✅ Deleted: ${name}`);
+                console.log(`\n✅ Deleted: ${name}`);
             }
-            continue;
         }
 
-        if (choice === "5") await gifManager();
+        if (action === "gifs") {
+            await gifManager();
+        }
     }
 }
 
-function validLiveId(id) {
-    return /^[a-zA-Z0-9_-]{6,32}$/.test(id);
-}
-
-function validChannelHandle(handle) {
-    return /^@[a-zA-Z0-9_.-]{2,64}$/.test(handle);
-}
+// ─── Source Picker ───
 
 async function pickSource() {
-    console.log("");
-    console.log("Connect to YouTube chat:");
-    console.log("  1) Live Video ID (e.g. puhZur2y-g8)");
-    console.log("  2) Channel Handle (e.g. @YourChannel)");
-    console.log("");
+    const source = await select({
+        message: "📺 Connect to YouTube chat via:",
+        choices: [
+            { name: "🎬 Live Video ID (e.g. puhZur2y-g8)", value: "live" },
+            { name: "📡 Channel Handle (e.g. @YourChannel)", value: "channel" },
+        ],
+    });
 
-    const choice = await ask("Choice [1/2]: ");
-    if (choice === "2") {
-        const channel = (await ask("Enter channel handle (with @): ")).trim();
-        if (!validChannelHandle(channel)) {
-            console.log("❌ Invalid channel handle.");
-            return null;
-        }
-        return `--channel=${channel}`;
+    if (source === "channel") {
+        const handle = await input({
+            message: "Channel handle (with @):",
+            validate: v => /^@[a-zA-Z0-9_.-]{2,64}$/.test(v.trim()) ? true : "Must start with @ (2-64 chars)",
+        });
+        return `--channel=${handle.trim()}`;
     }
 
-    const liveId = (await ask("Enter live video ID: ")).trim();
-    if (!validLiveId(liveId)) {
-        console.log("❌ Invalid live video ID.");
-        return null;
-    }
-    return `--live=${liveId}`;
+    const liveId = await input({
+        message: "Live video ID:",
+        validate: v => /^[a-zA-Z0-9_-]{6,32}$/.test(v.trim()) ? true : "Must be 6-32 chars (letters, numbers, dash, underscore)",
+    });
+    return `--live=${liveId.trim()}`;
 }
+
+// ─── Server Launcher ───
 
 async function startServer() {
     const active = getActiveConfig();
     activateConfig(active);
 
     const arg = await pickSource();
-    if (!arg) return;
 
-    console.log("");
-    console.log(`🚀 Starting with config: ${active}`);
-    console.log("   OBS Browser Source URL: http://localhost:6969");
-    console.log("");
+    console.log(`\n🚀 Starting with config: ${active}`);
+    console.log("   OBS Browser Source → http://localhost:6969\n");
 
-    rl.close();
     const server = spawn(process.execPath, [join(ROOT, "server.js"), arg], {
         cwd: ROOT,
         stdio: "inherit",
@@ -445,16 +454,19 @@ async function startServer() {
     server.on("exit", code => process.exit(code ?? 0));
 }
 
+// ─── First Run ───
+
 async function maybeFirstRunSetup() {
     const active = getActiveConfig();
     const cfg = loadConfig(active);
     if (cfg._configured === true) return;
 
-    console.log("");
-    console.log("First-time setup for this config.");
-    const run = await ask("Configure it now? [Y/n]: ");
-    if (run.toLowerCase() !== "n") await editConfig(active);
+    console.log("\n👋 First-time setup for this config.");
+    const run = await confirm({ message: "Configure it now?", default: true });
+    if (run) await editConfig(active);
 }
+
+// ─── Main ───
 
 async function mainMenu() {
     ensureDefaultConfig();
@@ -468,35 +480,34 @@ async function mainMenu() {
 
     while (true) {
         const active = getActiveConfig();
-        console.log("");
-        console.log("╔════════════════════════════════════╗");
-        console.log("║   Chat Overlay — Launcher          ║");
-        console.log("╚════════════════════════════════════╝");
-        console.log(`  Active config: ${active}`);
-        console.log("");
-        console.log("  1) Start overlay server");
-        console.log("  2) Manage configs / GIFs");
-        console.log("  0) Exit");
-        console.log("");
 
-        const choice = await ask("Choice [0-2]: ");
-        if (choice === "0") break;
-        if (choice === "2") {
+        console.log("\n╔════════════════════════════════════╗");
+        console.log("║   🎬 Chat Overlay — Launcher       ║");
+        console.log("╚════════════════════════════════════╝");
+        console.log(`   📋 Active config: ${active}`);
+
+        const action = await select({
+            message: "What do you want to do?",
+            choices: [
+                { name: "▶️  Start overlay server", value: "start" },
+                { name: "⚙️  Manage configs / GIFs", value: "manage" },
+                { name: "🚪 Exit", value: "exit" },
+            ],
+        });
+
+        if (action === "exit") break;
+        if (action === "manage") {
             await manageConfigs();
             continue;
         }
-        if (choice === "1" || choice === "") {
+        if (action === "start") {
             await startServer();
             return;
         }
     }
 }
 
-mainMenu()
-    .catch(err => {
-        console.error(`❌ ${err.message}`);
-        process.exitCode = 1;
-    })
-    .finally(() => {
-        if (!rl.closed) rl.close();
-    });
+mainMenu().catch(err => {
+    console.error(`\n❌ ${err.message}`);
+    process.exitCode = 1;
+});
