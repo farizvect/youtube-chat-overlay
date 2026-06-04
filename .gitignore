@@ -1,3 +1,6 @@
+# User config (gitignored)
+config.json
+
 # Dependencies
 node_modules/
 bun.lockb
