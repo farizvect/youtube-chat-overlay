@@ -1,5 +1,21 @@
 import { LiveChat } from "youtube-chat";
-import config from "./config.js";
+import { readFileSync } from "fs";
+import { join } from "path";
+
+// Load config — try config.json first, fall back to template
+let config;
+const configPath = join(import.meta.dir, "config.json");
+const templatePath = join(import.meta.dir, "config.template.json");
+try {
+    const raw = readFileSync(configPath, "utf-8");
+    config = JSON.parse(raw);
+    console.log("📋 Loaded config from config.json");
+} catch {
+    console.log("⚠️  config.json not found, using template defaults.");
+    console.log("   Run: bun setup.js   to customize interactively.");
+    const raw = readFileSync(templatePath, "utf-8");
+    config = JSON.parse(raw);
+}
 
 // Store connected WebSocket clients
 const clients = new Set();
