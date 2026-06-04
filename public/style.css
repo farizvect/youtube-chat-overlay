@@ -42,15 +42,15 @@ body {
 }
 
 /* Message position variants */
-.position-bottom-left {
+#chat-container.position-bottom-left {
     align-items: flex-start;
 }
 
-.position-bottom-center {
+#chat-container.position-bottom-center {
     align-items: center;
 }
 
-.position-bottom-right {
+#chat-container.position-bottom-right {
     align-items: flex-end;
 }
 
