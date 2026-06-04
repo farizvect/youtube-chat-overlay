@@ -50,9 +50,9 @@ echo "📦 Installing dependencies..."
 bun install
 echo "✅ Dependencies installed"
 
-# Run interactive config wizard
+# Run welcome onboarding (then setup wizard)
 echo ""
-bun setup.js
+bun welcome.js
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"

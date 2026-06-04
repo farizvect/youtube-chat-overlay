@@ -56,9 +56,9 @@ Write-Host "📦 Installing dependencies..."
 bun install
 Write-Host "✅ Dependencies installed"
 
-# Run interactive config wizard
+# Run welcome onboarding (then setup wizard)
 Write-Host ""
-bun setup.js
+bun welcome.js
 
 Write-Host ""
 Write-Host "╔══════════════════════════════════════════════╗"
