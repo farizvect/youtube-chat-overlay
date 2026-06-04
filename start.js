@@ -1,15 +1,26 @@
 // start.js — Interactive launcher with arrow-key selection
-import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, symlinkSync, unlinkSync, copyFileSync, readlinkSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, rmSync, symlinkSync, copyFileSync, readlinkSync } from "fs";
 import { join } from "path";
 import { select, input } from "@inquirer/prompts";
 import { spawn } from "child_process";
 
+const WINDOWS = process.platform === "win32";
 const ROOT = import.meta.dir;
 const CONFIGS_DIR = join(ROOT, "configs");
 const TEMPLATE_PATH = join(ROOT, "config.template.json");
 const LINK_PATH = join(ROOT, "config.json");
 
 if (!existsSync(CONFIGS_DIR)) mkdirSync(CONFIGS_DIR);
+
+function activateConfig(name) {
+    if (existsSync(LINK_PATH)) rmSync(LINK_PATH, { force: true });
+    try {
+        symlinkSync(`configs/${name}.json`, LINK_PATH);
+    } catch {
+        // Windows without admin/Developer Mode — fall back to copy
+        copyFileSync(join(CONFIGS_DIR, `${name}.json`), LINK_PATH);
+    }
+}
 
 function listConfigs() {
     if (!existsSync(CONFIGS_DIR)) return [];
@@ -69,8 +80,7 @@ if (chosen === "_new_") {
 }
 
 // Activate
-if (existsSync(LINK_PATH)) unlinkSync(LINK_PATH);
-symlinkSync(`configs/${selected}.json`, LINK_PATH);
+activateConfig(selected);
 console.log(`📋 Using config: ${selected}`);
 
 // Live source
