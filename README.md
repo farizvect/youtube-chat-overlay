@@ -20,11 +20,14 @@ bash start.sh
 - ✅ Emote support (channel emotes)
 - ✅ Custom word-to-GIF replacement
 - ✅ Role-based username colors (Owner, Mod, Member, Verified)
-- ✅ Super Chat styling
+- ✅ Super Chat styling + glow animation + extended duration
 - ✅ Slide-in animation + auto fade-out
 - ✅ Inline chat mode
 - ✅ Interactive config wizard (`bun setup.js`)
 - ✅ Multi-config — simpan preset untuk berbagai jenis stream
+- ✅ Config hot-reload — edit config saat server jalan, langsung update di OBS
+- ✅ Message replay — client baru langsung dapat chat terakhir (tidak blank)
+- ✅ Configurable message position (bottom-left, center, right)
 - ✅ GIF manager — import dari URL, tambah/hapus trigger
 
 ## Multi-Config
@@ -99,6 +102,8 @@ Tambahkan file GIF sendiri ke `public/gifs/`, lalu assign trigger lewat menu opt
     "verifiedColor": "#00bcd4",
 
     "inlineChat": false,
+    "position": "bottom-left",
+    "superChatDuration": 3,
 
     "bannedWords": [],
     "customGifs": {

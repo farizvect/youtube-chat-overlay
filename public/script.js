@@ -14,7 +14,9 @@ let config = {
     moderatorColor: "#5865f2",
     memberColor: "#2ecc71",
     verifiedColor: "#00bcd4",
-    inlineChat: false
+    inlineChat: false,
+    position: "bottom-left",
+    superChatDuration: 3,
 };
 
 // Track loaded fonts to avoid reloading
@@ -86,6 +88,13 @@ function connect() {
         root.setProperty('--moderator-color', config.moderatorColor);
         root.setProperty('--member-color', config.memberColor);
         root.setProperty('--verified-color', config.verifiedColor);
+
+        // Message position
+        const container = document.getElementById('chat-container');
+        container.className = container.className
+            .replace(/\bposition-\S+/g, '')
+            .trim();
+        container.classList.add(`position-${config.position || 'bottom-left'}`);
     }
 
     // Load Google Font dynamically
@@ -229,12 +238,15 @@ function addChatMessage(message) {
     }
 
     // Auto fade out
+    const duration = message.superchat
+        ? config.fadeOutDelay * (config.superChatDuration || 3)
+        : config.fadeOutDelay;
     setTimeout(() => {
         if (msgEl.parentNode) {
             msgEl.classList.add('fade-out');
             setTimeout(() => msgEl.remove(), 500);
         }
-    }, config.fadeOutDelay);
+    }, duration);
 
     // Scroll to bottom (if needed)
     container.scrollTop = container.scrollHeight;

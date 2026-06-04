@@ -41,6 +41,19 @@ body {
     overflow: hidden;
 }
 
+/* Message position variants */
+.position-bottom-left {
+    align-items: flex-start;
+}
+
+.position-bottom-center {
+    align-items: center;
+}
+
+.position-bottom-right {
+    align-items: flex-end;
+}
+
 /* Chat Message */
 .chat-message {
     display: inline-flex;
@@ -189,6 +202,13 @@ body {
 .chat-message.super-chat {
     border: 2px solid #ffd700;
     background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 170, 0, 0.15) 100%);
+    animation: slideIn 0.4s ease-out forwards, superChatGlow 3s ease-in-out infinite;
+    animation-delay: 0s, 0.4s;
+}
+
+@keyframes superChatGlow {
+    0%, 100% { box-shadow: 0 0 8px rgba(255, 215, 0, 0.3); }
+    50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 170, 0, 0.2); }
 }
 
 .chat-message.super-chat .username {

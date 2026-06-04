@@ -103,10 +103,35 @@ async function editConfig(name) {
     const inline = await ask("Inline chat mode? (username: message on same line) [y/N]: ");
     cfg.inlineChat = inline.toLowerCase() === "y";
 
+    // Position
+    console.log("");
+    console.log("Message position:");
+    console.log("  1) Bottom-left (default)");
+    console.log("  2) Bottom-center");
+    console.log("  3) Bottom-right");
+    const posMap = { "1": "bottom-left", "2": "bottom-center", "3": "bottom-right" };
+    const currentPos = Object.entries(posMap).find(([, v]) => v === (cfg.position || "bottom-left"))?.[0] || "1";
+    const posChoice = await ask(`Choice [1-3, default=${currentPos}]: `);
+    if (posMap[posChoice]) cfg.position = posMap[posChoice];
+
+    // Super Chat duration
+    const scDuration = await ask(`Super Chat duration multiplier [default=${cfg.superChatDuration || 3}]: `);
+    const scNum = parseInt(scDuration);
+    if (scNum >= 1 && scNum <= 10) cfg.superChatDuration = scNum;
+
     saveConfig(name, cfg);
-    console.log("");
+    console.log();
     console.log(`✅ Config "${name}" saved`);
-    console.log("");
+
+    // Trigger hot-reload on running server
+    try {
+        const cfg = loadConfig(name);
+        const port = cfg.port || 6969;
+        await fetch(`http://localhost:${port}/reload`, { method: "POST" });
+        console.log("🔄 Server config reloaded");
+    } catch {
+        // Server not running — that's fine
+    }
 }
 
 // ─── GIF Manager ───
