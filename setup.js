@@ -1,11 +1,8 @@
 // setup.js — Interactive configuration + GIF manager
-import { readFileSync, writeFileSync, existsSync, readdirSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from "fs";
 import { symlinkSync, unlinkSync, readlinkSync, copyFileSync } from "fs";
 import { join } from "path";
-import { createInterface } from "readline";
-
-const rl = createInterface({ input: process.stdin, output: process.stdout });
-const ask = (q) => new Promise(resolve => rl.question(q, resolve));
+import { select, input, confirm } from "@inquirer/prompts";
 
 const ROOT = import.meta.dir;
 const CONFIGS_DIR = join(ROOT, "configs");
@@ -13,14 +10,8 @@ const GIFS_DIR = join(ROOT, "public", "gifs");
 const TEMPLATE_PATH = join(ROOT, "config.template.json");
 const LINK_PATH = join(ROOT, "config.json");
 
-const FONTS = ["Roboto", "Inter", "Poppins", "Nunito", "Open Sans", "Montserrat"];
-const BG_PRESETS = {
-    "1": { name: "Dark (default)", color: "rgba(50, 50, 68, 0.9)" },
-    "2": { name: "Solid black", color: "rgba(0, 0, 0, 0.85)" },
-    "3": { name: "Dark purple", color: "rgba(30, 30, 50, 0.9)" },
-    "4": { name: "Transparent (no background)", color: "transparent" },
-    "5": { name: "Custom", color: null },
-};
+if (!existsSync(CONFIGS_DIR)) mkdirSync(CONFIGS_DIR);
+if (!existsSync(GIFS_DIR)) mkdirSync(GIFS_DIR);
 
 // ─── Helpers ───
 
@@ -34,16 +25,15 @@ function listConfigs() {
 function getActiveConfig() {
     try {
         const link = readlinkSync(LINK_PATH);
-        return link.replace("configs/", "").replace(".json", "") || "default";
+        return link.replace("configs/", "").replace(".json", "");
     } catch {
         return "default";
     }
 }
 
 function activateConfig(name) {
-    const target = `configs/${name}.json`;
     if (existsSync(LINK_PATH)) unlinkSync(LINK_PATH);
-    symlinkSync(target, LINK_PATH);
+    symlinkSync(`configs/${name}.json`, LINK_PATH);
 }
 
 function listGifFiles() {
@@ -61,153 +51,161 @@ function saveConfig(name, cfg) {
     writeFileSync(path, JSON.stringify(cfg, null, 4));
 }
 
-// ─── Edit Config Wizard ───
+// ─── Edit Config ───
 
 async function editConfig(name) {
     const cfg = loadConfig(name);
 
-    console.log("");
-    console.log(`─── Editing: ${name} ───`);
-    console.log("Press Enter to keep current values.");
-    console.log("");
+    console.log(`\n─── Editing: ${name} ───\n`);
 
     // Font
-    console.log("Font choices:");
-    FONTS.forEach((f, i) => console.log(`  ${i + 1}) ${f}`));
-    const currentFontIdx = FONTS.indexOf(cfg.fontFamily) + 1 || 1;
-    const fontChoice = await ask(`Font [1-${FONTS.length}, default=${currentFontIdx}]: `);
-    const idx = parseInt(fontChoice) - 1;
-    if (idx >= 0 && idx < FONTS.length) cfg.fontFamily = FONTS[idx];
+    const fonts = ["Roboto", "Inter", "Poppins", "Nunito", "Open Sans", "Montserrat"];
+    const fontIdx = fonts.indexOf(cfg.fontFamily);
+    cfg.fontFamily = await select({
+        message: "Font",
+        choices: fonts.map((f, i) => ({ name: f, value: f })),
+        default: fontIdx >= 0 ? fontIdx : 0,
+    });
 
     // Font size
-    const size = await ask(`Font size [default=${cfg.fontSize}]: `);
-    const sizeNum = parseInt(size);
-    if (sizeNum >= 12 && sizeNum <= 32) cfg.fontSize = sizeNum;
+    const size = await input({
+        message: "Font size (12-32)",
+        default: String(cfg.fontSize || 16),
+        validate: v => {
+            const n = parseInt(v);
+            return (n >= 12 && n <= 32) ? true : "Must be 12-32";
+        },
+    });
+    cfg.fontSize = parseInt(size);
 
     // Background
-    console.log("");
-    console.log("Background style:");
-    Object.entries(BG_PRESETS).forEach(([k, v]) => console.log(`  ${k}) ${v.name}`));
-    const bgChoice = await ask("Choice [1-5, default=1]: ");
-    if (bgChoice === "4") {
+    const bg = await select({
+        message: "Background style",
+        choices: [
+            { name: "Dark (default)", value: "rgba(50, 50, 68, 0.9)" },
+            { name: "Solid black", value: "rgba(0, 0, 0, 0.85)" },
+            { name: "Dark purple", value: "rgba(30, 30, 50, 0.9)" },
+            { name: "Transparent (no background)", value: "transparent" },
+        ],
+    });
+    if (bg === "transparent") {
         cfg.noBackground = true;
-    } else if (bgChoice === "5") {
-        const custom = await ask("Enter RGBA color (e.g. rgba(20,20,30,0.8)): ");
-        if (custom) { cfg.backgroundColor = custom; cfg.noBackground = false; }
-    } else if (BG_PRESETS[bgChoice]) {
-        cfg.backgroundColor = BG_PRESETS[bgChoice].color;
+    } else {
+        cfg.backgroundColor = bg;
         cfg.noBackground = false;
     }
 
     // Inline mode
-    const inline = await ask("Inline chat mode? (username: message on same line) [y/N]: ");
-    cfg.inlineChat = inline.toLowerCase() === "y";
+    cfg.inlineChat = await confirm({
+        message: "Inline chat mode? (username: message on same line)",
+        default: cfg.inlineChat || false,
+    });
 
     // Position
-    console.log("");
-    console.log("Message position:");
-    console.log("  1) Bottom-left (default)");
-    console.log("  2) Bottom-center");
-    console.log("  3) Bottom-right");
-    const posMap = { "1": "bottom-left", "2": "bottom-center", "3": "bottom-right" };
-    const currentPos = Object.entries(posMap).find(([, v]) => v === (cfg.position || "bottom-left"))?.[0] || "1";
-    const posChoice = await ask(`Choice [1-3, default=${currentPos}]: `);
-    if (posMap[posChoice]) cfg.position = posMap[posChoice];
+    cfg.position = await select({
+        message: "Message position",
+        choices: [
+            { name: "Bottom-left (default)", value: "bottom-left" },
+            { name: "Bottom-center", value: "bottom-center" },
+            { name: "Bottom-right", value: "bottom-right" },
+        ],
+        default: ["bottom-left", "bottom-center", "bottom-right"].indexOf(cfg.position || "bottom-left"),
+    });
 
     // Super Chat duration
-    const scDuration = await ask(`Super Chat duration multiplier [default=${cfg.superChatDuration || 3}]: `);
-    const scNum = parseInt(scDuration);
-    if (scNum >= 1 && scNum <= 10) cfg.superChatDuration = scNum;
+    const sc = await input({
+        message: "Super Chat duration multiplier (1-10)",
+        default: String(cfg.superChatDuration || 3),
+        validate: v => {
+            const n = parseInt(v);
+            return (n >= 1 && n <= 10) ? true : "Must be 1-10";
+        },
+    });
+    cfg.superChatDuration = parseInt(sc);
 
     saveConfig(name, cfg);
-    console.log();
     console.log(`✅ Config "${name}" saved`);
 
-    // Trigger hot-reload on running server
+    await triggerReload(cfg.port || 6969);
+}
+
+async function triggerReload(port) {
     try {
-        const cfg = loadConfig(name);
-        const port = cfg.port || 6969;
         await fetch(`http://localhost:${port}/reload`, { method: "POST" });
-        console.log("🔄 Server config reloaded");
+        console.log("🔄 Server config reloaded\n");
     } catch {
-        // Server not running — that's fine
+        console.log("");
     }
 }
 
 // ─── GIF Manager ───
 
 async function gifManager() {
+    const active = getActiveConfig();
+    const cfg = loadConfig(active);
+
     while (true) {
-        const active = getActiveConfig();
-        const cfg = loadConfig(active);
         const gifs = cfg.customGifs || {};
         const gifFiles = listGifFiles();
 
-        console.log("");
-        console.log("─── GIF Manager ───");
-        console.log(`  Config: ${active}`);
-        console.log("");
+        console.log(`\n─── GIF Manager (config: ${active}) ───`);
         if (Object.keys(gifs).length === 0) {
-            console.log("  No GIF triggers configured.");
+            console.log("  No triggers configured.");
         } else {
             console.log("  Trigger → File:");
-            Object.entries(gifs).forEach(([k, v]) => console.log(`    ${k} → ${v}`));
+            for (const [k, v] of Object.entries(gifs)) {
+                console.log(`    ${k} → ${v}`);
+            }
         }
-        console.log("");
         if (gifFiles.length > 0) {
-            console.log("  Files in public/gifs/:");
-            gifFiles.forEach(f => console.log(`    - ${f}`));
+            console.log(`\n  Files in public/gifs/:  ${gifFiles.join(", ")}`);
         } else {
-            console.log("  No GIF files in public/gifs/");
+            console.log("\n  No GIF files in public/gifs/");
         }
-        console.log("");
-        console.log("  1) Add GIF trigger");
-        console.log("  2) Remove GIF trigger");
-        console.log("  3) Import GIF from URL");
-        console.log("  0) Back");
-        console.log("");
 
-        const choice = await ask("Choice [0-3]: ");
+        const action = await select({
+            message: "What do you want to do?",
+            choices: [
+                { name: "Add GIF trigger", value: "add" },
+                { name: "Remove GIF trigger", value: "remove" },
+                { name: "Import GIF from URL", value: "import" },
+                { name: "← Back to main menu", value: "back" },
+            ],
+        });
 
-        if (choice === "0") break;
+        if (action === "back") break;
 
-        if (choice === "1") {
-            const keyword = await ask("Trigger word: ");
-            if (!keyword) continue;
+        if (action === "add") {
             if (gifFiles.length === 0) {
-                console.log("❌ No GIF files. Import one first (option 3).");
+                console.log("❌ No GIF files. Import one first.");
                 continue;
             }
-            console.log("Available files:");
-            gifFiles.forEach(f => console.log(`  ${f}`));
-            const file = await ask("Filename (e.g. happycat.gif): ");
-            if (!file) continue;
-            if (!gifFiles.includes(file)) {
-                console.log("❌ File not found in public/gifs/");
-                continue;
-            }
+            const file = await select({
+                message: "Pick a GIF file",
+                choices: gifFiles.map(f => ({ name: f, value: f })),
+            });
+            const keyword = await input({ message: "Trigger word" });
+            if (!keyword) continue;
             gifs[keyword] = `/gifs/${file}`;
             cfg.customGifs = gifs;
             saveConfig(active, cfg);
             console.log(`✅ Added: "${keyword}" → /gifs/${file}`);
-            continue;
         }
 
-        if (choice === "2") {
-            const keyword = await ask("Trigger word to remove: ");
-            if (!keyword || !gifs[keyword]) {
-                console.log("❌ Not found.");
-                continue;
-            }
+        if (action === "remove") {
+            if (Object.keys(gifs).length === 0) continue;
+            const keyword = await select({
+                message: "Trigger to remove",
+                choices: Object.keys(gifs).map(k => ({ name: `${k} → ${gifs[k]}`, value: k })),
+            });
             delete gifs[keyword];
             cfg.customGifs = gifs;
             saveConfig(active, cfg);
             console.log(`✅ Removed: "${keyword}"`);
-            continue;
         }
 
-        if (choice === "3") {
-            const url = await ask("GIF URL (must be .gif/.png/.webp): ");
+        if (action === "import") {
+            const url = await input({ message: "GIF URL (.gif/.png/.webp)" });
             if (!url) continue;
             const filename = url.split("/").pop()?.split("?")[0] || "imported.gif";
             if (!/\.(gif|png|webp)$/i.test(filename)) {
@@ -222,7 +220,7 @@ async function gifManager() {
                 const buf = await resp.arrayBuffer();
                 writeFileSync(dest, Buffer.from(buf));
                 console.log(`✅ Downloaded to public/gifs/${filename}`);
-                const keyword = await ask("Trigger word for this GIF: ");
+                const keyword = await input({ message: "Trigger word for this GIF" });
                 if (keyword) {
                     gifs[keyword] = `/gifs/${filename}`;
                     cfg.customGifs = gifs;
@@ -232,8 +230,78 @@ async function gifManager() {
             } catch (e) {
                 console.log(`❌ Download failed: ${e.message}`);
             }
-            continue;
         }
+    }
+}
+
+// ─── Create Config ───
+
+async function createConfig() {
+    const name = await input({ message: "New config name" });
+    if (!name) return;
+    const path = join(CONFIGS_DIR, `${name}.json`);
+    if (existsSync(path)) {
+        console.log(`❌ Config "${name}" already exists.`);
+        return;
+    }
+    const template = JSON.parse(readFileSync(TEMPLATE_PATH, "utf-8"));
+    writeFileSync(path, JSON.stringify(template, null, 4));
+    console.log(`✅ Created config: ${name}`);
+
+    const sw = await confirm({ message: "Switch to it now?", default: true });
+    if (sw) {
+        activateConfig(name);
+        console.log(`✅ Switched to config: ${name}`);
+    }
+}
+
+// ─── Switch Config ───
+
+async function switchConfig() {
+    const active = getActiveConfig();
+    const configs = listConfigs();
+    if (configs.length <= 1) {
+        console.log("Only one config exists. Create a new one first.");
+        return;
+    }
+    const name = await select({
+        message: "Switch to config",
+        choices: configs.map(c => ({
+            name: c === active ? `${c}  ← active` : c,
+            value: c,
+        })),
+    });
+    if (name !== active) {
+        activateConfig(name);
+        console.log(`✅ Switched to: ${name}`);
+    }
+}
+
+// ─── Delete Config ───
+
+async function deleteConfig() {
+    const active = getActiveConfig();
+    const configs = listConfigs();
+    if (configs.length <= 1) {
+        console.log("❌ Cannot delete the only config.");
+        return;
+    }
+    const name = await select({
+        message: "Delete config",
+        choices: configs
+            .filter(c => c !== "default")
+            .map(c => ({
+                name: c === active ? `${c}  ← active` : c,
+                value: c,
+            })),
+    });
+    if (!name) return;
+    const path = join(CONFIGS_DIR, `${name}.json`);
+    unlinkSync(path);
+    console.log(`✅ Deleted: ${name}`);
+    if (name === active) {
+        activateConfig("default");
+        console.log("   Switched to default");
     }
 }
 
@@ -242,104 +310,38 @@ async function gifManager() {
 async function mainMenu() {
     while (true) {
         const active = getActiveConfig();
-        const configs = listConfigs();
 
         console.log("");
         console.log("╔════════════════════════════════════╗");
         console.log("║   Chat Overlay — Setup Wizard     ║");
         console.log("╚════════════════════════════════════╝");
         console.log(`  Active config: ${active}`);
-        console.log("");
-        console.log("  1) Edit current config");
-        console.log("  2) Switch config");
-        console.log("  3) Create new config");
-        console.log("  4) Delete config");
-        console.log("  5) Manage GIFs");
-        console.log("  0) Exit");
-        console.log("");
 
-        const choice = await ask("Choice [0-5]: ");
+        const choice = await select({
+            message: "What do you want to do?",
+            choices: [
+                { name: "🎨  Edit current config", value: "edit" },
+                { name: "🔄  Switch config", value: "switch" },
+                { name: "➕  Create new config", value: "create" },
+                { name: "🗑️   Delete config", value: "delete" },
+                { name: "🖼️   Manage GIFs", value: "gifs" },
+                { name: "👋  Exit", value: "exit" },
+            ],
+        });
 
-        if (choice === "0") break;
+        if (choice === "exit") break;
 
-        if (choice === "1") {
-            await editConfig(active);
-            continue;
-        }
-
-        if (choice === "2") {
-            console.log("\nAvailable configs:");
-            configs.forEach(c => {
-                const marker = c === active ? " ← active" : "";
-                console.log(`  - ${c}${marker}`);
-            });
-            const name = (await ask("\nConfig name to switch to: ")).trim();
-            if (name && configs.includes(name)) {
-                activateConfig(name);
-                console.log(`✅ Switched to config: ${name}`);
-            } else if (name) {
-                console.log("❌ Config not found.");
-            }
-            continue;
-        }
-
-        if (choice === "3") {
-            const name = (await ask("New config name: ")).trim();
-            if (!name) continue;
-            const path = join(CONFIGS_DIR, `${name}.json`);
-            if (existsSync(path)) {
-                console.log(`❌ Config "${name}" already exists.`);
-                continue;
-            }
-            const template = JSON.parse(readFileSync(TEMPLATE_PATH, "utf-8"));
-            writeFileSync(path, JSON.stringify(template, null, 4));
-            console.log(`✅ Created config: ${name}`);
-            const sw = await ask("Switch to it now? [Y/n]: ");
-            if (sw.toLowerCase() !== "n") {
-                activateConfig(name);
-                console.log(`✅ Switched to config: ${name}`);
-            }
-            continue;
-        }
-
-        if (choice === "4") {
-            if (configs.length <= 1) {
-                console.log("❌ Cannot delete the only config.");
-                continue;
-            }
-            console.log("\nConfigs:");
-            configs.forEach(c => console.log(`  - ${c}${c === active ? " ← active" : ""}`));
-            const name = (await ask("\nConfig name to delete: ")).trim();
-            if (!name) continue;
-            if (name === "default") {
-                console.log("❌ Cannot delete default config.");
-                continue;
-            }
-            if (!configs.includes(name)) {
-                console.log("❌ Config not found.");
-                continue;
-            }
-            const path = join(CONFIGS_DIR, `${name}.json`);
-            unlinkSync(path);
-            if (name === active) {
-                activateConfig("default");
-                console.log(`✅ Deleted "${name}" — switched to default`);
-            } else {
-                console.log(`✅ Deleted: ${name}`);
-            }
-            continue;
-        }
-
-        if (choice === "5") {
-            await gifManager();
-            continue;
+        switch (choice) {
+            case "edit": await editConfig(active); break;
+            case "switch": await switchConfig(); break;
+            case "create": await createConfig(); break;
+            case "delete": await deleteConfig(); break;
+            case "gifs": await gifManager(); break;
         }
     }
 
     console.log("\n👋 Bye!\n");
+    process.exit(0);
 }
 
-mainMenu().then(() => {
-    rl.close();
-    setTimeout(() => process.exit(0), 50);
-});
+mainMenu();
