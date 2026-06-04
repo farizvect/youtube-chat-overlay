@@ -18,15 +18,27 @@ Write-Host ""
 
 # Find bun — try PATH first, then known locations
 function Find-Bun {
+    # Ensure known Bun locations are in PATH
+    $known = @(
+        "$HOME\.bun\bin",
+        "$env:ProgramFiles\bun"
+    )
+    foreach ($p in $known) {
+        if ((Test-Path $p) -and ($env:Path -notlike "*$p*")) {
+            $env:Path = "$p;$env:Path"
+        }
+    }
+
     $cmd = Get-Command bun -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
-    $known = @(
+
+    $bins = @(
         "$HOME\.bun\bin\bun.exe",
         "$HOME\.bun\bin\bun",
         "$env:ProgramFiles\bun\bun.exe"
     )
-    foreach ($p in $known) {
-        if (Test-Path $p) { return $p }
+    foreach ($b in $bins) {
+        if (Test-Path $b) { return $b }
     }
     return $null
 }
