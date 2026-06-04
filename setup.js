@@ -1,6 +1,6 @@
 // setup.js — Interactive configuration + GIF manager
-import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from "fs";
-import { symlinkSync, unlinkSync, readlinkSync, copyFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, rmSync } from "fs";
+import { symlinkSync, readlinkSync, copyFileSync } from "fs";
 import { join } from "path";
 import { select, input, confirm } from "@inquirer/prompts";
 
@@ -32,8 +32,12 @@ function getActiveConfig() {
 }
 
 function activateConfig(name) {
-    if (existsSync(LINK_PATH)) unlinkSync(LINK_PATH);
-    symlinkSync(`configs/${name}.json`, LINK_PATH);
+    if (existsSync(LINK_PATH)) rmSync(LINK_PATH, { force: true });
+    try {
+        symlinkSync(`configs/${name}.json`, LINK_PATH);
+    } catch {
+        copyFileSync(join(CONFIGS_DIR, `${name}.json`), LINK_PATH);
+    }
 }
 
 function listGifFiles() {
