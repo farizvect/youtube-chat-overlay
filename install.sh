@@ -34,8 +34,14 @@ if [ -d "$INSTALL_DIR" ]; then
 fi
 
 echo ""
-echo "📥 Cloning repo..."
-git clone "$REPO" "$INSTALL_DIR"
+if command -v git &>/dev/null; then
+    echo "📥 Cloning repo via git..."
+    git clone --depth 1 "$REPO" "$INSTALL_DIR"
+else
+    echo "📥 Git not found — downloading via curl..."
+    curl -fsSL "https://github.com/farizvect/youtube-chat-overlay/archive/refs/heads/main.tar.gz" | tar xz
+    mv youtube-chat-overlay-main "$INSTALL_DIR"
+fi
 cd "$INSTALL_DIR"
 
 # Install dependencies
