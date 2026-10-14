@@ -270,7 +270,7 @@ function processMessage(message) {
         } else if (part.type === "emote") {
             // Render emote as image with error handling
             // On error, replace with alt text
-            html += `<img src="${escapeAttr(part.url)}" class="emote" alt="${escapeAttr(part.text)}" onerror="this.outerHTML=this.alt">`;
+            html += `<img src="${escapeAttr(part.url)}" class="emote" alt="${escapeAttr(part.text)}" onerror="this.replaceWith(document.createTextNode(this.alt))">`;
         }
     }
 
